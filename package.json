@@ -1,0 +1,29 @@
+{
+  "name": "dbms",
+  "version": "0.0.1",
+  "description": "Database Managment System",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/totaljs/dbms.git"
+  },
+  "keywords": [
+    "orm",
+    "database",
+    "postgresql",
+    "mysql",
+    "mariadb",
+    "mongodb",
+    "sqlserver",
+    "nosql"
+  ],
+  "author": "Peter Sirka",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/totaljs/dbms/issues"
+  },
+  "homepage": "https://github.com/totaljs/dbms#readme"
+}
