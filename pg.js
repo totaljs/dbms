@@ -1,5 +1,3 @@
-// @TODO: insert + unique
-
 const Database = require('pg');
 const POOLS = {};
 const REG_ESCAPE_1 = /'/g;
@@ -120,6 +118,20 @@ function insert(client, cmd) {
 	});
 }
 
+function insertexists(client, cmd) {
+	var builder = cmd.builder;
+	var opt = builder.options;
+	var q = 'SELECT 1 as dbmsvalue FROM ' + opt.table + WHERE(builder);
+	builder.db.$debug && builder.db.$debug(q);
+	client.query(q, function(err, response) {
+		var rows = response ? response.rows : EMPTYARRAY;
+		if (rows.length)
+			builder.$callback(err, 0);
+		else
+			insert(client, cmd);
+	});
+}
+
 function modify(client, cmd) {
 
 	var keys = Object.keys(cmd.value);
@@ -209,7 +221,10 @@ exports.run = function(opt, self, cmd) {
 					scalar(client, cmd);
 					break;
 				case 'insert':
-					insert(client, cmd);
+					if (cmd.unique)
+						insertexists(client, cmd);
+					else
+						insert(client, cmd);
 					break;
 				case 'update':
 				case 'modify':
@@ -279,6 +294,16 @@ function WHERE(builder, scalar, group) {
 				break;
 			case 'empty':
 				condition.push('("' + cmd.name + '" IS NULL OR LENGTH("' + cmd.name + +'"::text)=0)');
+				break;
+			case 'month':
+			case 'year':
+			case 'day':
+			case 'hour':
+			case 'minute':
+				condition.push('EXTRACT(' + cmd.type + ' from "' + cmd.name + '")' + cmd.compare + ESCAPE(cmd.value));
+				break;
+			case 'code':
+				condition.push('(' + cmd.value + ')');
 				break;
 			case 'or':
 				condition.push('(');

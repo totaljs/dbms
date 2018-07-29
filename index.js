@@ -20,6 +20,7 @@ function DBMS() {
 	self.$commands = [];
 	self.$output = null;
 	self.$outputall = {};
+	self.$eb = global.ErrorBuilder != null;
 	self.$errors = global.ErrorBuilder ? new global.ErrorBuilder() : [];
 
 	// self.$lastoutput;
@@ -129,7 +130,7 @@ DP.next = function() {
 			require('./' + conn.db).run(conn, self, cmd);
 		}
 	} else if (self.$callback)
-		self.$callback(null, self.$output);
+		self.$callback(self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null, self.$output);
 	return self;
 };
 
@@ -204,6 +205,7 @@ DP.insert = function(table, value, unique) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'insert');
 	builder.table(table);
+	builder.first();
 	self.$commands.push({ type: 'insert', builder: builder, value: value, unique: unique });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
@@ -288,7 +290,7 @@ QB.$callback = function(err, value, count) {
 	opt.callback && opt.callback(err, value, count);
 
 	if (err) {
-		self.db.$errors == null && self.db.$errors.push(err);
+		self.db.$errors.push(err);
 		self.db.$lastoutput = null;
 		self.db.$outputall[opt.table] = null;
 	} else {
@@ -468,6 +470,72 @@ QB.fields = function() {
 	return self;
 };
 
+QB.year = function(name, compare, value) {
+
+	if (value === undefined) {
+		value = compare;
+		compare = '=';
+	}
+
+	var self = this;
+	self.$commands.push({ type: 'year', name: name, value: value, compare: compare });
+	return self;
+};
+
+QB.month = function(name, compare, value) {
+
+	if (value === undefined) {
+		value = compare;
+		compare = '=';
+	}
+
+	var self = this;
+	self.$commands.push({ type: 'month', name: name, value: value, compare: compare });
+	return self;
+};
+
+QB.day = function(name, compare, value) {
+
+	if (value === undefined) {
+		value = compare;
+		compare = '=';
+	}
+
+	var self = this;
+	self.$commands.push({ type: 'day', name: name, value: value, compare: compare });
+	return self;
+};
+
+QB.hour = function(name, compare, value) {
+
+	if (value === undefined) {
+		value = compare;
+		compare = '=';
+	}
+
+	var self = this;
+	self.$commands.push({ type: 'hour', name: name, value: value, compare: compare });
+	return self;
+};
+
+QB.query = function(value) {
+	var self = this;
+	self.$commands.push({ type: 'code', value: value });
+	return self;
+};
+
+QB.minute = function(name, compare, value) {
+
+	if (value === undefined) {
+		value = compare;
+		compare = '=';
+	}
+
+	var self = this;
+	self.$commands.push({ type: 'minute', name: name, value: value, compare: compare });
+	return self;
+};
+
 exports.QueryBuilder = QueryBuilder;
 exports.DBMS = DBMS;
 exports.make = function(fn) {
@@ -478,7 +546,7 @@ exports.make = function(fn) {
 
 exports.init = function(name, connection) {
 
-	if (connection == null) {
+	if (connection == null || typeof(connection) === 'function') {
 		connection = name;
 		name = 'default';
 	}

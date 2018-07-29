@@ -55,6 +55,9 @@ function WHERE(db, builder) {
 			case 'notin':
 				db.notin(cmd.name, cmd.value);
 				break;
+			case 'code':
+				db.code(cmd.value);
+				break;
 			case 'between':
 				if (typeof(cmd.a) === 'function')
 					cmd.a = cmd.a();
@@ -73,6 +76,15 @@ function WHERE(db, builder) {
 				break;
 			case 'empty':
 				db.empty(cmd.name);
+				break;
+			case 'year':
+				db.year(cmd.name, cmd.compare, cmd.value);
+				break;
+			case 'month':
+				db.month(cmd.name, cmd.compare, cmd.value);
+				break;
+			case 'day':
+				db.day(cmd.name, cmd.compare, cmd.value);
 				break;
 			case 'or':
 				db.or();

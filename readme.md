@@ -11,6 +11,10 @@
 ```javascript
 const dbms = require('dbms');
 
+dbms.init([alias], connection_string);
+// @alias {String} Optional, alias for connection string (default: 'default')
+// @connection_string {String} A connection string to DB
+
 // PostgreSQL
 dbms.init('postgresql://user:pass@localhost:5432/dbname');
 dbms.init('mypg', postgresql://user:pass@localhost:5432/dbname'); // with a name for more DB engines
@@ -31,27 +35,28 @@ dbms.init('mytable', 'nosql'); // with a name for more DB engines
 var db = DBMS();
 
 // Finds records
-// returns Array
+// A response: Array
+// returns QueryBuilder
 db.find('collection_table_name');
 db.find('mypg/collection_table_name');
 db.find('mynosql/collection_table_name');
 db.find('mytable/collection_table_name');
 
 // Finds the one record
-// returns Object
+// A response: Object
+// returns QueryBuilder
 db.one('collection_table_name');
 db.one('mypg/collection_table_name');
 db.one('mynosql/collection_table_name');
 db.one('mytable/collection_table_name');
 
 // Inserts a new record
-// returns Number
+// A response: Number
+// returns QueryBuilder
 db.insert('collection_table_name', document, [unique]);
 db.insert('mypg/collection_table_name', document, [unique]);
 db.insert('mynosql/collection_table_name', document, [unique]);
 db.insert('mytable/collection_table_name', document, [unique]);
-
-
 ```
 
 ## Contributors
