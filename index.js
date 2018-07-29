@@ -105,7 +105,7 @@ DP.next = function() {
 	var cmd = self.$commands.shift();
 	if (cmd) {
 		if (cmd.type === 'task') {
-			cmd.value(self, self.$outputall, self.$lastoutput);
+			cmd.value.call(self, self.$outputall, self.$lastoutput);
 			setImmediate(self.$next);
 		} else if (cmd.type === 'validate') {
 			var type = typeof(cmd.value);
@@ -398,7 +398,7 @@ QB.make = function(fn) {
 	return self;
 };
 
-QB.assign = function(prop) {
+QB.set = QB.assign = function(prop) {
 	var self = this;
 	self.options.assign = prop == null ? '' : prop;
 	return self;
