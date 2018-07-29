@@ -307,7 +307,7 @@ QB.$callback = function(err, value, count) {
 			self.db.$output = value;
 	}
 
-	self.db.next();
+	setImmediate(self.db.$next);
 };
 
 QB.make = function(fn) {
