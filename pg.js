@@ -30,7 +30,7 @@ function list(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q = 'SELECT COUNT(*)::int as dbmsvalue FROM ' + opt.table + WHERE(builder, true) + ';SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder);
+	var q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + WHERE(builder, true) + ';SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder);
 
 	builder.db.$debug && builder.db.$debug(q);
 
@@ -39,22 +39,6 @@ function list(client, cmd) {
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		var meta = rows.shift();
 		builder.$callback(err, rows, meta.dbmsvalue || 0);
-	});
-}
-
-function count(client, cmd) {
-
-	var builder = cmd.builder;
-	var opt = builder.options;
-	var q = 'SELECT COUNT(*)::int as dbmsvalue FROM ' + opt.table + WHERE(builder);
-
-	builder.db.$debug && builder.db.$debug(q);
-
-	client.query(q, function(err, response) {
-		client.$done();
-		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
-		rows = rows.length ? rows[0].dbmsvalue : 0;
-		builder.$callback(err, rows);
 	});
 }
 
@@ -69,10 +53,11 @@ function scalar(client, cmd) {
 		case 'min':
 		case 'sum':
 		case 'max':
-			q = 'SELECT ' + cmd.scalar.toUpperCase() + '("' + cmd.name + '")::int as dbmsvalue FROM ' + opt.table;
+		case 'count':
+			q = 'SELECT ' + cmd.scalar.toUpperCase() + (cmd.scalar !== 'count' ? ('("' + cmd.name + '")') : '(1)') + '::int as dbmsvalue FROM ' + opt.table;
 			break;
 		case 'group':
-			q = 'SELECT "' + cmd.name + '" FROM ' + opt.table;
+			q = 'SELECT "' + cmd.name + '", COUNT(1)::int as count FROM ' + opt.table;
 			break;
 	}
 
@@ -83,7 +68,7 @@ function scalar(client, cmd) {
 		client.$done();
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		if (cmd.scalar !== 'group')
-			rows = rows[0].dbmsvalue || 0;
+			rows = rows.length ? (rows[0].dbmsvalue || 0) : 0;
 		builder.$callback(err, rows);
 	});
 }
@@ -213,9 +198,6 @@ exports.run = function(opt, self, cmd) {
 					break;
 				case 'list':
 					list(client, cmd);
-					break;
-				case 'count':
-					count(client, cmd);
 					break;
 				case 'scalar':
 					scalar(client, cmd);

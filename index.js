@@ -1,7 +1,9 @@
+const Fs = require('fs');
 const Url = require('url');
 const Qs = require('querystring');
 const CONN = {};
 const CACHE = {};
+const COMPARE = { '<': '<', '>': '>', '>=': '>=', '=>': '>=', '=<': '<=', '<=': '<=', '==': '=', '===': '=', '!=': '!=', '<>': '!=' };
 
 function promise(fn) {
 	var self = this;
@@ -18,16 +20,24 @@ function promise(fn) {
 function DBMS(ebuilder) {
 	var self = this;
 	self.$commands = [];
-	self.$output = null;
+	self.$output = {};
 	self.$outputall = {};
 	self.$eb = global.ErrorBuilder != null;
 	self.$errors = ebuilder || (global.ErrorBuilder ? new global.ErrorBuilder() : []);
 
+	// self.$log;
 	// self.$lastoutput;
+
 	self.$next = function() {
 		self.next();
 	};
 }
+
+// DBMS.prototype = {
+// 	get counter() {
+// 		return this.$counter ? this.$counter : (this.$counter = new Counter(this));
+// 	}
+// };
 
 const DP = DBMS.prototype;
 
@@ -45,13 +55,23 @@ DP.debug = function() {
 
 DP.callback = function(fn) {
 	var self = this;
-	if (!self.$output)
-		self.$output = {};
 	self.$callback = fn;
 	return self;
 };
 
-DP.data = function(path) {
+DP.data = function(fn) {
+	var self = this;
+	self.$callbackok = fn;
+	return self;
+};
+
+DP.fail = function(fn) {
+	var self = this;
+	self.$callbackno = fn;
+	return self;
+};
+
+DP.get = function(path) {
 	var self = this;
 	path = path.split('.');
 	return function() {
@@ -66,9 +86,7 @@ DP.data = function(path) {
 				break;
 			}
 		}
-
 		p = path[path.length - 1];
-
 		if (data instanceof Array) {
 			tmp = [];
 			for (var i = 0; i < data.length; i++) {
@@ -77,9 +95,8 @@ DP.data = function(path) {
 					tmp.push(val);
 			}
 			return tmp;
-		} else {
+		} else
 			return data ? data[p] : null;
-		}
 	};
 };
 
@@ -87,7 +104,10 @@ DP.next = function() {
 	var self = this;
 	var cmd = self.$commands.shift();
 	if (cmd) {
-		if (cmd.type === 'validate') {
+		if (cmd.type === 'task') {
+			cmd.value(self, self.$outputall, self.$lastoutput);
+			setImmediate(self.$next);
+		} else if (cmd.type === 'validate') {
 			var type = typeof(cmd.value);
 			var stop = false;
 			switch (type) {
@@ -130,13 +150,20 @@ DP.next = function() {
 				self.$commands = null;
 				self.$callback(self.$errors, null);
 			} else
-				self.next();
+				setImmediate(self.$next);
 		} else {
 			var conn = CONN[cmd.builder.options.db];
 			require('./' + conn.db).run(conn, self, cmd);
 		}
-	} else if (self.$callback)
-		self.$callback(self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null, self.$output);
+	} else {
+		var err = self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null;
+		self.$callback && self.$callback(err, self.$output);
+		if (err)
+			self.$callbackno && self.$callbackno(err);
+		else
+			self.$callbackok && self.$callbackok(self.$output);
+
+	}
 	return self;
 };
 
@@ -154,6 +181,11 @@ DP.find = function(table) {
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
+};
+
+DP.task = function(fn) {
+	this.$commands.push({ type: 'task', value: fn });
+	return this;
 };
 
 DP.list = DP.listing = function(table) {
@@ -197,14 +229,27 @@ DP.scalar = function(table, type, name) {
 };
 
 DP.count = function(table) {
-	var self = this;
-	var builder = new QueryBuilder(self, 'count');
-	builder.table(table);
-	builder.first();
-	self.$commands.push({ type: 'count', builder: builder });
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
-	return builder;
+	return this.scalar(table, 'count');
+};
+
+DP.max = function(table, prop) {
+	return this.scalar(table, 'max', prop);
+};
+
+DP.min = function(table, prop) {
+	return this.scalar(table, 'min', prop);
+};
+
+DP.avg = function(table, prop) {
+	return this.scalar(table, 'avg', prop);
+};
+
+DP.sum = function(table, prop) {
+	return this.scalar(table, 'sum', prop);
+};
+
+DP.group = function(table, prop) {
+	return this.scalar(table, 'group', prop);
 };
 
 DP.insert = function(table, value, unique) {
@@ -250,7 +295,7 @@ DP.remove = function(table) {
 
 DP.must = DP.validate = function(err, reverse) {
 	var self = this;
-	self.$commands.push({ type: 'validate', value: err, reverse: reverse });
+	self.$commands.push({ type: 'validate', value: err || 'unhandled exception', reverse: reverse });
 	return self;
 };
 
@@ -262,8 +307,21 @@ function QueryBuilder(db, type) {
 }
 
 const QB = QueryBuilder.prototype;
+const NOOP = function(){};
 
 QB.promise = promise;
+
+QB.log = function(msg, user) {
+	var self = this;
+	if (msg) {
+		NOW = new Date();
+		self.$log = (self.$log ? self.$log : '') + NOW.format('yyyy-MM-dd HH:mm:ss') + ' | '  + self.options.table.padRight(25) + ': ' + (user ? '[' + user.padRight(20) + '] ' : '') + msg + '\n';
+	} else if (self.$log) {
+		Fs.appendFile(F.path.logs('dmbs.log'), self.$log, NOOP);
+		self.$log = null;
+	}
+	return self;
+};
 
 QB.table = function(table) {
 
@@ -286,6 +344,8 @@ QB.$callback = function(err, value, count) {
 	var self = this;
 	var opt = self.options;
 
+	self.$log && self.log();
+
 	if (opt.type === 'list') {
 		value = { items: value, count: count };
 		value.page = (opt.skip / opt.take) + 1;
@@ -296,15 +356,37 @@ QB.$callback = function(err, value, count) {
 	opt.callback && opt.callback(err, value, count);
 
 	if (err) {
+
 		self.db.$errors.push(err);
 		self.db.$lastoutput = null;
 		self.db.$outputall[opt.table] = null;
+		opt.callbackno && opt.callbackno(err);
+
 	} else {
+
 		self.db.$outputall[opt.table] = self.db.$lastoutput = value;
 		if (opt.assign)
 			self.db.$outputall[opt.assign] = self.db.$output[opt.assign] = value;
 		else
 			self.db.$output = value;
+
+		var ok = true;
+		if (opt.validate) {
+			if (value instanceof Array) {
+				if (!value.length) {
+					self.db.$errors.push(opt.validate);
+					ok = false;
+				}
+			} else if (!value) {
+				self.$errors.push(opt.validate);
+				ok = false;
+			}
+		}
+
+		if (ok)
+			opt.callbackok && opt.callbackok(value, count);
+		else
+			opt.callbackno && opt.callbackno(opt.validate);
 	}
 
 	setImmediate(self.db.$next);
@@ -327,6 +409,10 @@ QB.where = function(name, compare, value) {
 	if (value === undefined) {
 		value = compare;
 		compare = '=';
+	} else {
+		compare = COMPARE[compare];
+		if (compare == null)
+			throw new Error('DBMS: comparer "' + compare + '" is not supported for QueryBuilder.');
 	}
 
 	var self = this;
@@ -447,6 +533,24 @@ QB.callback = function(callback) {
 	return self;
 };
 
+QB.data = function(fn) {
+	var self = this;
+	self.options.callbackok = fn;
+	return self;
+};
+
+QB.fail = function(fn) {
+	var self = this;
+	self.options.callbackno = fn;
+	return self;
+};
+
+QB.must = QB.validate = function(err) {
+	var self = this;
+	self.options.validate = err || 'unhandled exception';
+	return self;
+};
+
 QB.insert = function(callback) {
 	var self = this;
 	self.options.insert = callback;
@@ -481,6 +585,10 @@ QB.year = function(name, compare, value) {
 	if (value === undefined) {
 		value = compare;
 		compare = '=';
+	} else {
+		compare = COMPARE[compare];
+		if (compare == null)
+			throw new Error('DBMS: comparer "' + compare + '" is not supported for QueryBuilder.');
 	}
 
 	var self = this;
@@ -493,6 +601,10 @@ QB.month = function(name, compare, value) {
 	if (value === undefined) {
 		value = compare;
 		compare = '=';
+	} else {
+		compare = COMPARE[compare];
+		if (compare == null)
+			throw new Error('DBMS: comparer "' + compare + '" is not supported for QueryBuilder.');
 	}
 
 	var self = this;
@@ -505,6 +617,10 @@ QB.day = function(name, compare, value) {
 	if (value === undefined) {
 		value = compare;
 		compare = '=';
+	} else {
+		compare = COMPARE[compare];
+		if (compare == null)
+			throw new Error('DBMS: comparer "' + compare + '" is not supported for QueryBuilder.');
 	}
 
 	var self = this;
@@ -517,16 +633,14 @@ QB.hour = function(name, compare, value) {
 	if (value === undefined) {
 		value = compare;
 		compare = '=';
+	} else {
+		compare = COMPARE[compare];
+		if (compare == null)
+			throw new Error('DBMS: comparer "' + compare + '" is not supported for QueryBuilder.');
 	}
 
 	var self = this;
 	self.$commands.push({ type: 'hour', name: name, value: value, compare: compare });
-	return self;
-};
-
-QB.query = function(value) {
-	var self = this;
-	self.$commands.push({ type: 'code', value: value });
 	return self;
 };
 
@@ -535,10 +649,20 @@ QB.minute = function(name, compare, value) {
 	if (value === undefined) {
 		value = compare;
 		compare = '=';
+	} else {
+		compare = COMPARE[compare];
+		if (compare == null)
+			throw new Error('DBMS: comparer "' + compare + '" is not supported for QueryBuilder.');
 	}
 
 	var self = this;
 	self.$commands.push({ type: 'minute', name: name, value: value, compare: compare });
+	return self;
+};
+
+QB.query = function(value) {
+	var self = this;
+	self.$commands.push({ type: 'code', value: value });
 	return self;
 };
 
