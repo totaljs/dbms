@@ -26,7 +26,7 @@ function select(client, cmd) {
 	});
 }
 
-function listing(client, cmd) {
+function list(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
@@ -211,8 +211,8 @@ exports.run = function(opt, self, cmd) {
 				case 'find':
 					select(client, cmd);
 					break;
-				case 'listing':
-					listing(client, cmd);
+				case 'list':
+					list(client, cmd);
 					break;
 				case 'count':
 					count(client, cmd);

@@ -8,7 +8,7 @@ exports.run = function(opt, self, cmd) {
 		case 'find':
 			WHERE(db(cmd.builder.options.table).find(), cmd.builder);
 			break;
-		case 'listing':
+		case 'list':
 			WHERE(db(cmd.builder.options.table).listing(), cmd.builder);
 			break;
 		case 'count':

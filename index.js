@@ -31,7 +31,7 @@ function DBMS(ebuilder) {
 
 const DP = DBMS.prototype;
 
-DB.output = function(val) {
+DP.output = function(val) {
 	this.$output = val;
 	return this;
 };
@@ -45,7 +45,8 @@ DP.debug = function() {
 
 DP.callback = function(fn) {
 	var self = this;
-	self.$output = {};
+	if (!self.$output)
+		self.$output = {};
 	self.$callback = fn;
 	return self;
 };
@@ -155,18 +156,18 @@ DP.find = function(table) {
 	return builder;
 };
 
-DP.listing = function(table) {
+DP.list = DP.listing = function(table) {
 	var self = this;
-	var builder = new QueryBuilder(self, 'listing');
+	var builder = new QueryBuilder(self, 'list');
 	builder.table(table);
 	builder.take(100);
-	self.$commands.push({ type: 'listing', builder: builder });
+	self.$commands.push({ type: 'list', builder: builder });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
 };
 
-DP.one = function(table) {
+DP.read = DP.one = function(table) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'find');
 	builder.table(table);
@@ -211,7 +212,7 @@ DP.insert = function(table, value, unique) {
 	var builder = new QueryBuilder(self, 'insert');
 	builder.table(table);
 	builder.first();
-	self.$commands.push({ type: 'insert', builder: builder, value: value, unique: unique });
+	self.$commands.push({ type: 'insert', builder: builder, value: value && typeof(value.$clean) === 'function' ? value.$clean() : value, unique: unique });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -221,7 +222,7 @@ DP.update = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'update');
 	builder.table(table);
-	self.$commands.push({ type: 'update', builder: builder, value: value, insert: insert });
+	self.$commands.push({ type: 'update', builder: builder, value: value && typeof(value.$clean) === 'function' ? value.$clean() : value, insert: insert });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -231,7 +232,7 @@ DP.modify = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'modify');
 	builder.table(table);
-	self.$commands.push({ type: 'modify', builder: builder, value: value, insert: insert });
+	self.$commands.push({ type: 'modify', builder: builder, value: value && typeof(value.$clean) === 'function' ? value.$clean() : value, insert: insert });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -247,7 +248,7 @@ DP.remove = function(table) {
 	return builder;
 };
 
-DP.validate = function(err, reverse) {
+DP.must = DP.validate = function(err, reverse) {
 	var self = this;
 	self.$commands.push({ type: 'validate', value: err, reverse: reverse });
 	return self;
@@ -285,7 +286,7 @@ QB.$callback = function(err, value, count) {
 	var self = this;
 	var opt = self.options;
 
-	if (opt.type === 'listing') {
+	if (opt.type === 'list') {
 		value = { items: value, count: count };
 		value.page = (opt.skip / opt.take) + 1;
 		value.limit = opt.take;
@@ -592,13 +593,13 @@ exports.init = function(name, connection) {
 	return exports;
 };
 
-global.DBMS = function() {
-	return new DBMS();
+global.DBMS = function(err) {
+	return new exports.DBMS(err);
 };
 
 // Total.js framework
 if (global.F) {
-	global.F.database = function() {
-		return new DBMS();
+	global.F.database = function(err) {
+		return new DBMS(err);
 	};
 }
