@@ -15,13 +15,13 @@ function promise(fn) {
 	});
 }
 
-function DBMS() {
+function DBMS(ebuilder) {
 	var self = this;
 	self.$commands = [];
 	self.$output = null;
 	self.$outputall = {};
 	self.$eb = global.ErrorBuilder != null;
-	self.$errors = global.ErrorBuilder ? new global.ErrorBuilder() : [];
+	self.$errors = ebuilder || (global.ErrorBuilder ? new global.ErrorBuilder() : []);
 
 	// self.$lastoutput;
 	self.$next = function() {
@@ -30,6 +30,11 @@ function DBMS() {
 }
 
 const DP = DBMS.prototype;
+
+DB.output = function(val) {
+	this.$output = val;
+	return this;
+};
 
 DP.debug = function() {
 	this.$debug = function(val) {
