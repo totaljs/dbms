@@ -143,7 +143,8 @@ function modify(client, cmd) {
 			case '*':
 			case '/':
 				params.push(val ? val : 0);
-				type = SCOL + key.substring(1) + '"=COALESCE("' + key + '",0)' + c + '$' + (index++);
+				key = key.substring(1);
+				type = SCOL + key + '"=COALESCE("' + key + '",0)' + c + '$' + (index++);
 				break;
 			default:
 				params.push(val);
