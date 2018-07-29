@@ -554,7 +554,7 @@ exports.init = function(name, connection) {
 	// Total.js
 	if (connection === 'nosql' || connection === 'table') {
 		CONN[name] = { id: name, db: 'total', type: connection };
-		return;
+		return exports;
 	}
 
 	var opt = Url.parse(connection);
@@ -583,6 +583,8 @@ exports.init = function(name, connection) {
 			CONN[name] = { id: name, db: 'pg', options: tmp };
 			break;
 	}
+
+	return exports;
 };
 
 global.DBMS = function() {
