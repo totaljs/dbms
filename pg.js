@@ -329,7 +329,7 @@ function WHERE(builder, scalar, group) {
 		}
 	}
 
-	var query = (condition.length ? (' WHERE ' + condition.join(' ')) : '') + (group ? (' GROUP BY ' + group) : '');
+	var query = (condition.length ? (' WHERE ' + condition.join(' AND ')) : '') + (group ? (' GROUP BY ' + group) : '');
 
 	if (!scalar) {
 		if (sort.length)

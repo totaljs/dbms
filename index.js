@@ -38,7 +38,7 @@ DP.output = function(val) {
 
 DP.debug = function() {
 	this.$debug = function(val) {
-		console.log('--->', val);
+		console.log('DBMS --->', val);
 	};
 	return this;
 };
@@ -594,12 +594,20 @@ exports.init = function(name, connection) {
 };
 
 global.DBMS = function(err) {
-	return new exports.DBMS(err);
+	if (typeof(err) === 'function') {
+		var db = new exports.DBMS();
+		err.call(db, db);
+	} else
+		return new exports.DBMS(err);
 };
 
 // Total.js framework
 if (global.F) {
 	global.F.database = function(err) {
-		return new DBMS(err);
+		if (typeof(err) === 'function') {
+			var db = new exports.DBMS();
+			err.call(db, db);
+		} else
+			return new exports.DBMS(err);
 	};
 }
