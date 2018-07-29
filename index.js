@@ -4,6 +4,7 @@ const Qs = require('querystring');
 const CONN = {};
 const CACHE = {};
 const COMPARE = { '<': '<', '>': '>', '>=': '>=', '=>': '>=', '=<': '<=', '<=': '<=', '==': '=', '===': '=', '!=': '!=', '<>': '!=' };
+const MODIFY = { insert: 1, update: 1, modify: 1 };
 
 function promise(fn) {
 	var self = this;
@@ -152,6 +153,8 @@ DP.next = function() {
 			} else
 				setImmediate(self.$next);
 		} else {
+			if (MODIFY[cmd.type] && cmd.value && typeof(cmd.value.$clean) === 'function')
+				cmd.value = cmd.value.$clean();
 			var conn = CONN[cmd.builder.options.db];
 			require('./' + conn.db).run(conn, self, cmd);
 		}
@@ -257,7 +260,7 @@ DP.insert = function(table, value, unique) {
 	var builder = new QueryBuilder(self, 'insert');
 	builder.table(table);
 	builder.first();
-	self.$commands.push({ type: 'insert', builder: builder, value: value && typeof(value.$clean) === 'function' ? value.$clean() : value, unique: unique });
+	self.$commands.push({ type: 'insert', builder: builder, value: value, unique: unique });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -267,7 +270,7 @@ DP.update = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'update');
 	builder.table(table);
-	self.$commands.push({ type: 'update', builder: builder, value: value && typeof(value.$clean) === 'function' ? value.$clean() : value, insert: insert });
+	self.$commands.push({ type: 'update', builder: builder, value: value, insert: insert });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -277,7 +280,7 @@ DP.modify = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'modify');
 	builder.table(table);
-	self.$commands.push({ type: 'modify', builder: builder, value: value && typeof(value.$clean) === 'function' ? value.$clean() : value, insert: insert });
+	self.$commands.push({ type: 'modify', builder: builder, value: value, insert: insert });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
