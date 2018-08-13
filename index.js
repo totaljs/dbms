@@ -398,7 +398,7 @@ QB.$callback = function(err, value, count) {
 QB.make = function(fn) {
 	var self = this;
 	fn.call(self, self);
-	return self;
+	return self.db;
 };
 
 QB.set = QB.assign = function(prop) {

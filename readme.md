@@ -2,6 +2,7 @@
 
 [![Professional Support](https://www.totaljs.com/img/badge-support.svg)](https://www.totaljs.com/support/) [![Chat with contributors](https://www.totaljs.com/img/badge-chat.svg)](https://messenger.totaljs.com) [![NPM version][npm-version-image]][npm-url] [![NPM downloads][npm-downloads-image]][npm-url] [![MIT License][license-image]][license-url]
 
+- [__Documentation__](https://wiki.totaljs.com/dbms/01-welcome/)
 - installation `$ npm install dbms`
 - supports Total.js `NoSQL embedded`
 - supports `PostgreSQL`
@@ -17,7 +18,7 @@ dbms.init([alias], connection_string);
 
 // PostgreSQL
 dbms.init('postgresql://user:pass@localhost:5432/dbname');
-dbms.init('mypg', postgresql://user:pass@localhost:5432/dbname'); // with a name for more DB engines
+dbms.init('mypg', 'postgresql://user:pass@localhost:5432/dbname'); // with a name for more DB engines
 
 // Total.js NoSQL embedded
 dbms.init('nosql');
