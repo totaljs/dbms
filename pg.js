@@ -38,7 +38,7 @@ function list(client, cmd) {
 		client.$done();
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		var meta = rows.shift();
-		builder.$callback(err, rows, meta.dbmsvalue || 0);
+		builder.$callback(err, rows, meta ? meta.dbmsvalue || 0 : 0);
 	});
 }
 
@@ -262,7 +262,7 @@ function WHERE(builder, scalar, group) {
 					condition.push(SCOL + cmd.name + SCOL + '<>' + ESCAPE(cmd.value));
 				break;
 			case 'between':
-				condition.push('("' + cmd.name + SCOL + cmd.compare + '>=' + ESCAPE(cmd.a) + ' AND "' + cmd.name + '"<=' + ESCAPE(cmd.b));
+				condition.push('("' + cmd.name + '">=' + ESCAPE(cmd.a) + ' AND "' + cmd.name + '"<=' + ESCAPE(cmd.b) + ')');
 				break;
 			case 'search':
 				tmp = ESCAPE((!cmd.compare || cmd.compare === '*' ? ('%' + cmd.value + '%') : (cmd.compare === 'beg' ? ('%' + cmd.value) : (cmd.value + '%'))));
