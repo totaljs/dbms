@@ -383,12 +383,12 @@ function pg_escape(val){
 
 function dateToString(dt) {
 	var arr = [];
-	arr.push(dt.getFullYear().toString());
-	arr.push((dt.getMonth() + 1).toString());
-	arr.push(dt.getDate().toString());
-	arr.push(dt.getHours().toString());
-	arr.push(dt.getMinutes().toString());
-	arr.push(dt.getSeconds().toString());
+	arr.push(dt.getUTCFullYear().toString());
+	arr.push((dt.getUTCMonth() + 1).toString());
+	arr.push(dt.getUTCDate().toString());
+	arr.push(dt.getUTCHours().toString());
+	arr.push(dt.getUTCMinutes().toString());
+	arr.push(dt.getUTCSeconds().toString());
 
 	for (var i = 1, length = arr.length; i < length; i++) {
 		if (arr[i].length === 1)
