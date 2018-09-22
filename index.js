@@ -868,6 +868,8 @@ QB.prototype.gridfilter = function(name, obj, type, key) {
 QB.prototype.gridsort = function(sort) {
 	var builder = this;
 	var index = sort.lastIndexOf('_');
+	if (index === -1)
+		index = sort.lastIndexOf(' ');
 	builder.sort(sort.substring(0, index), sort.substring(index + 1) === 'desc');
 	return builder;
 };
