@@ -742,3 +742,132 @@ if (global.F) {
 			return new exports.DBMS(err);
 	};
 }
+
+// Converting values
+var convert = function(value, type) {
+
+	if (type === undefined || type === String)
+		return value;
+
+	if (type === Number)
+		return value.trim().parseFloat();
+
+	if (type === Date) {
+		value = value.trim();
+		if (value.indexOf(' ') !== -1)
+			return NOW.add('-' + value);
+		if (value.length < 8) {
+			var tmp;
+			var index = value.indexOf('-');
+			if (index !== -1) {
+				tmp = value.split('-');
+				value = NOW.getFullYear() + '-' + (tmp[0].length > 1 ? '' : '0') + tmp[0] + '-' + (tmp[1].length > 1 ? '' : '0') + tmp[1];
+			} else {
+				index = value.indexOf('.');
+				if (index !== -1) {
+					tmp = value.split('.');
+					value = NOW.getFullYear() + '-' + (tmp[1].length > 1 ? '' : '0') + tmp[0] + '-' + (tmp[0].length > 1 ? '' : '0') + tmp[1];
+				} else if (value.length <= 4) {
+					value = +value;
+					return value || 0;
+				}
+			}
+		}
+
+		return value.trim().parseDate();
+	}
+
+	if (type === Boolean)
+		return value.trim().parseBoolean();
+
+	return value;
+};
+
+// Grid filtering
+QB.prototype.gridfilter = function(name, obj, type, key) {
+
+	var builder = this;
+	var value = obj[name];
+	var arr, val;
+
+	if (!key)
+		key = name;
+
+	// Between
+	var index = value.indexOf(' - ');
+	if (index !== -1) {
+
+		arr = value.split(' - ');
+
+		for (var i = 0, length = arr.length; i < length; i++) {
+			var item = arr[i].trim();
+			arr[i] = convert(item, type);
+		}
+
+		if (type === Date) {
+			if (typeof(arr[0]) === 'number') {
+				arr[0] = new Date(arr[0], 1, 1, 0, 0, 0);
+				arr[1] = new Date(arr[1], 11, 31, 23, 59, 59);
+			} else
+				arr[1] = arr[1].extend('23:59:59');
+		}
+
+		return builder.between(key, arr[0], arr[1]);
+	}
+
+	// Multiple values
+	index = value.indexOf(',');
+	if (index !== -1) {
+
+		var arr = value.split(',');
+
+		if (type === undefined || type === String) {
+			builder.or();
+			for (var i = 0, length = arr.length; i < length; i++) {
+				var item = arr[i].trim();
+				builder.search(key, item);
+			}
+			return builder.end();
+		}
+
+		for (var i = 0, length = arr.length; i < length; i++)
+			arr[i] = convert(arr[i], type);
+
+		return builder.in(key, arr);
+	}
+
+	if (type === undefined || type === String)
+		return builder.search(key, value);
+
+	if (type === Date) {
+
+		if (value === 'yesterday')
+			val = NOW.add('-1 day');
+		else if (value === 'today')
+			val = NOW;
+		else
+			val = convert(value, type);
+
+		if (typeof(val) === 'number') {
+			if (val > 1000)
+				return builder.year(key, val);
+			else
+				return builder.month(key, val);
+		}
+
+		if (!(val instanceof Date) || !val.getTime())
+			val = NOW;
+
+		return builder.between(key, val.extend('00:00:00'), val.extend('23:59:59'));
+	}
+
+	return builder.where(key, convert(value, type));
+};
+
+// Grid sorting
+QB.prototype.gridsort = function(sort) {
+	var builder = this;
+	var index = sort.lastIndexOf('_');
+	builder.sort(sort.substring(0, index), sort.substring(index + 1) === 'desc');
+	return builder;
+};
