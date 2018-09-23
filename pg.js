@@ -35,9 +35,19 @@ function list(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 
 	client.query(q, function(err, response) {
+
 		client.$done();
-		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
-		var meta = rows.shift();
+
+		var rows, meta;
+
+		if (response instanceof Array) {
+			rows = response[1] ? (response[1].rows || EMPTYARRAY) : EMPTYARRAY;
+			meta = response[0] ? response[0].rows[0] : null;
+		} else {
+			rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
+			meta = rows.shift();
+		}
+
 		builder.$callback(err, rows, meta ? meta.dbmsvalue || 0 : 0);
 	});
 }
@@ -230,16 +240,19 @@ function WHERE(builder, scalar, group) {
 	var condition = [];
 	var sort = [];
 	var tmp;
+	var op = 'AND';
+	var opuse = false;
 
 	for (var i = 0; i < builder.$commands.length; i++) {
 		var cmd = builder.$commands[i];
-
 		switch (cmd.type) {
 			case 'where':
 				tmp = ESCAPE(cmd.value);
+				opuse && condition.length && condition.push(op);
 				condition.push(SCOL + cmd.name + SCOL + (tmp == null && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
 				break;
 			case 'in':
+				opuse && condition.length && condition.push(op);
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
 				if (cmd.value instanceof Array) {
@@ -251,6 +264,7 @@ function WHERE(builder, scalar, group) {
 					condition.push(SCOL + cmd.name + SCOL + '=' + ESCAPE(cmd.value));
 				break;
 			case 'notin':
+				opuse && condition.length && condition.push(op);
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
 				if (cmd.value instanceof Array) {
@@ -262,20 +276,25 @@ function WHERE(builder, scalar, group) {
 					condition.push(SCOL + cmd.name + SCOL + '<>' + ESCAPE(cmd.value));
 				break;
 			case 'between':
+				opuse && condition.length && condition.push(op);
 				condition.push('("' + cmd.name + '">=' + ESCAPE(cmd.a) + ' AND "' + cmd.name + '"<=' + ESCAPE(cmd.b) + ')');
 				break;
 			case 'search':
 				tmp = ESCAPE((!cmd.compare || cmd.compare === '*' ? ('%' + cmd.value + '%') : (cmd.compare === 'beg' ? ('%' + cmd.value) : (cmd.value + '%'))));
+				opuse && condition.length && condition.push(op);
 				condition.push(SCOL + cmd.name + SCOL + ' LIKE ' + tmp);
 				break;
 			case 'fulltext':
 				tmp = ESCAPE('%' + cmd.value.toLowerCase() + '%');
+				opuse && condition.length && condition.push(op);
 				condition.push('LOWER("' + cmd.name + '") LIKE ' + tmp);
 				break;
 			case 'contains':
+				opuse && condition.length && condition.push(op);
 				condition.push('LENGTH("' + cmd.name + +'"::text)>0');
 				break;
 			case 'empty':
+				opuse && condition.length && condition.push(op);
 				condition.push('("' + cmd.name + '" IS NULL OR LENGTH("' + cmd.name + +'"::text)=0)');
 				break;
 			case 'month':
@@ -283,18 +302,25 @@ function WHERE(builder, scalar, group) {
 			case 'day':
 			case 'hour':
 			case 'minute':
+				opuse && condition.length && condition.push(op);
 				condition.push('EXTRACT(' + cmd.type + ' from "' + cmd.name + '")' + cmd.compare + ESCAPE(cmd.value));
 				break;
 			case 'code':
+				opuse && condition.length && condition.push(op);
 				condition.push('(' + cmd.value + ')');
 				break;
 			case 'or':
+				opuse && condition.length && condition.push(op);
+				op = 'OR';
+				opuse = false;
 				condition.push('(');
-				break;
+				continue;
 			case 'end':
 				condition.push(')');
 				break;
 			case 'and':
+				opuse && condition.length && condition.push(op);
+				op = 'AND';
 				break;
 			case 'sort':
 				sort.push(SCOL + cmd.name + SCOL + ' ' + (cmd.desc ? 'DESC' : 'ASC'));
@@ -307,12 +333,14 @@ function WHERE(builder, scalar, group) {
 					g = '~*';
 				} else
 					tmp = tmp.substring(0, tmp.length - 1);
+				opuse && condition.length && condition.push(op);
 				condition.push(SCOL + cmd.name + SCOL + g + '\'' + tmp + '\'');
 				break;
 		}
+		opuse = true;
 	}
 
-	var query = (condition.length ? (' WHERE ' + condition.join(' AND ')) : '') + (group ? (' GROUP BY ' + group) : '');
+	var query = (condition.length ? (' WHERE ' + condition.join(' ')) : '') + (group ? (' GROUP BY ' + group) : '');
 
 	if (!scalar) {
 		if (sort.length)

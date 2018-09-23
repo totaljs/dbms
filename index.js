@@ -767,9 +767,14 @@ var convert = function(value, type) {
 				if (index !== -1) {
 					tmp = value.split('.');
 					value = NOW.getFullYear() + '-' + (tmp[1].length > 1 ? '' : '0') + tmp[0] + '-' + (tmp[0].length > 1 ? '' : '0') + tmp[1];
-				} else if (value.length <= 4) {
-					value = +value;
-					return value || 0;
+				} else {
+					index = value.indexOf(':');
+					if (index !== -1) {
+						// hours
+					} else if (value.length <= 4) {
+						value = +value;
+						return value || 0;
+					}
 				}
 			}
 		}
@@ -784,7 +789,7 @@ var convert = function(value, type) {
 };
 
 // Grid filtering
-QB.prototype.gridfilter = function(name, obj, type, key) {
+QB.gridfilter = function(name, obj, type, key) {
 
 	var builder = this;
 	var value = obj[name];
@@ -865,7 +870,7 @@ QB.prototype.gridfilter = function(name, obj, type, key) {
 };
 
 // Grid sorting
-QB.prototype.gridsort = function(sort) {
+QB.gridsort = function(sort) {
 	var builder = this;
 	var index = sort.lastIndexOf('_');
 	if (index === -1)
