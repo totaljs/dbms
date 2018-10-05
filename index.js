@@ -149,7 +149,7 @@ DP.next = function() {
 			}
 			if (stop) {
 				self.$commands = null;
-				self.$callback(self.$errors, null);
+				self.$callback && self.$callback(self.$errors, null);
 			} else
 				setImmediate(self.$next);
 		} else {
