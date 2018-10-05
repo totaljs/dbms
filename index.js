@@ -315,7 +315,7 @@ const NOOP = function(){};
 QB.promise = promise;
 
 QB.get = function(path) {
-	return self.db.get(path);
+	return this.db.get(path);
 };
 
 QB.log = function(msg, user) {
