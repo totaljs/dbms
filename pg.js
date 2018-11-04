@@ -99,6 +99,16 @@ function insert(client, cmd) {
 		if (val === undefined)
 			continue;
 
+		switch (key[0]) {
+			case '-':
+			case '+':
+			case '*':
+			case '/':
+				key = key.substring(1);
+				break;
+		}
+
+
 		fields.push(SCOL + key + SCOL);
 		values.push('$' + index++);
 		params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.value) : val);
