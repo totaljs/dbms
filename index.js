@@ -42,6 +42,19 @@ function DBMS(ebuilder) {
 
 const DP = DBMS.prototype;
 
+DP.blob = function(name) {
+	var conn = CONN[name || 'default'];
+	var driver = require('./' + conn.db);
+	return {
+		write: function(stream, filename, callback) {
+			driver.blob_write(conn, stream, filename, callback);
+		},
+		read: function(id, callback) {
+			driver.blob_read(conn, id, callback);
+		}
+	};
+};
+
 DP.output = function(val) {
 	this.$output = val;
 	return this;

@@ -1,4 +1,5 @@
 const Database = require('pg');
+const Lo = require('./pg-lo');
 const POOLS = {};
 const REG_ESCAPE_1 = /'/g;
 const REG_ESCAPE_2 = /\\/g;
@@ -242,6 +243,75 @@ exports.run = function(opt, self, cmd) {
 					break;
 			}
 		}
+	});
+};
+
+exports.blob_read = function(opt, id, callback) {
+
+	if (typeof(id) === 'string')
+		id = +id;
+
+	createpool(opt).connect(function(err, client, done) {
+
+		if (err)
+			return callback(err);
+
+		client.query('BEGIN', function(err) {
+
+			if (err) {
+				done();
+				return callback(err);
+			}
+
+			Lo.create(client).readStream(id, opt.buffersize || 16384, function(err, size, stream) {
+				if (err) {
+					client.query('COMMIT', done);
+					callback(err);
+				} else {
+					var cb = () => client.query('COMMIT', done);
+					stream.on('error', cb);
+					stream.on('end', cb);
+					callback(null, stream, { size: parseInt(size) });
+				}
+			});
+		});
+	});
+};
+
+exports.blob_write = function(opt, stream, name, callback) {
+
+	if (typeof(name) === 'function') {
+		callback = name;
+		name = undefined;
+	}
+
+	createpool(opt).connect(function(err, client, done) {
+
+		if (err)
+			return callback(err);
+
+		client.query('BEGIN', function(err) {
+
+			if (err) {
+				done();
+				return callback(err);
+			}
+
+			Lo.create(client).writeStream(opt.buffersize || 16384, function(err, oid, writer) {
+
+				if (err) {
+					client.query('ROLLBACK', done);
+					return callback(err);
+				}
+
+				writer.on('finish', function() {
+					client.query('COMMIT', done);
+					callback(null, oid.toString());
+				});
+
+				stream.pipe(writer);
+			});
+		});
 	});
 };
 
