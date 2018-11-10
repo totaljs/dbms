@@ -42,15 +42,25 @@ function DBMS(ebuilder) {
 
 const DP = DBMS.prototype;
 
-DP.blob = function(name) {
-	var conn = CONN[name || 'default'];
-	var driver = require('./' + conn.db);
+DP.blob = function(table) {
+
+	if (!table)
+		table = 'default';
+
+	var cache = CACHE[table];
+	if (!cache) {
+		var tmp = table.split('/');
+		cache = { db: tmp.length > 1 ? tmp[0] : 'default', table: tmp.length > 1 ? tmp[1] : tmp[0] };
+		CACHE[table] = cache;
+	}
+
+	var driver = require('./' + cache.db);
 	return {
 		write: function(stream, filename, callback) {
-			driver.blob_write(conn, stream, filename, callback);
+			driver.blob_write(CONN[cache.db], stream, filename, callback);
 		},
 		read: function(id, callback) {
-			driver.blob_read(conn, id, callback);
+			driver.blob_read(CONN[cache.db], id, callback);
 		}
 	};
 };
@@ -60,10 +70,12 @@ DP.output = function(val) {
 	return this;
 };
 
+function debug(val) {
+	console.log('DBMS --->', val);
+}
+
 DP.debug = function() {
-	this.$debug = function(val) {
-		console.log('DBMS --->', val);
-	};
+	this.$debug = debug;
 	return this;
 };
 
