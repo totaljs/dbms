@@ -287,7 +287,7 @@ DP.insert = function(table, value, unique) {
 	var builder = new QueryBuilder(self, 'insert');
 	builder.table(table);
 	builder.first();
-	self.$commands.push({ type: 'insert', builder: builder, value: value, unique: unique });
+	builder.$commandindex = self.$commands.push({ type: 'insert', builder: builder, value: value || {}, unique: unique }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -297,7 +297,7 @@ DP.update = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'update');
 	builder.table(table);
-	self.$commands.push({ type: 'update', builder: builder, value: value, insert: insert });
+	builder.$commandindex = self.$commands.push({ type: 'update', builder: builder, value: value || {}, insert: insert }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -307,7 +307,7 @@ DP.modify = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'modify');
 	builder.table(table);
-	self.$commands.push({ type: 'modify', builder: builder, value: value, insert: insert });
+	builder.$commandindex = self.$commands.push({ type: 'modify', builder: builder, value: value || {}, insert: insert }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -432,7 +432,49 @@ QB.make = function(fn) {
 	return self.db;
 };
 
-QB.set = QB.assign = function(prop) {
+QB.inc = function(prop, value) {
+
+	var self = this;
+
+	if (self.$commandindex == null)
+		throw new Error('This QueryBuilder.inc() is supported for INSERT/UPDATE/MODIFY operations.');
+
+	var cmd = self.db.$commands[self.$commandindex];
+
+	if (value > 0)
+		prop = '+' + prop;
+	else {
+		prop = '-' + prop;
+		value = value * -1;
+	}
+
+	if (cmd.value[prop])
+		cmd.value += value;
+	else
+		cmd.value[prop] = value;
+
+	return self;
+};
+
+QB.set = QB.upd = function(prop, value) {
+
+	var self = this;
+
+	if (value === undefined) {
+		self.options.assign = prop == null ? '' : prop;
+		return self;
+	}
+
+	if (self.$commandindex == null)
+		throw new Error('This QueryBuilder.inc() is supported for INSERT/UPDATE/MODIFY operations.');
+
+	var cmd = self.db.$commands[self.$commandindex];
+	cmd.value[prop] = value;
+	return self;
+};
+
+// Is same as `set()` without `value`
+QB.assign = function(prop) {
 	var self = this;
 	self.options.assign = prop == null ? '' : prop;
 	return self;
