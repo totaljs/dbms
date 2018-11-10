@@ -54,13 +54,15 @@ DP.blob = function(table) {
 		CACHE[table] = cache;
 	}
 
-	var driver = require('./' + cache.db);
+	var conn = CONN[cache.db];
+	var driver = require('./' + conn.db);
+
 	return {
 		write: function(stream, filename, callback) {
-			driver.blob_write(CONN[cache.db], stream, filename, callback);
+			driver.blob_write(conn, stream, filename, callback);
 		},
 		read: function(id, callback) {
-			driver.blob_read(CONN[cache.db], id, callback);
+			driver.blob_read(conn, id, callback);
 		}
 	};
 };
