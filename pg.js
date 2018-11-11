@@ -27,6 +27,20 @@ function select(client, cmd) {
 	});
 }
 
+function query(client, cmd) {
+	var builder = cmd.builder;
+	var opt = builder.options;
+	var q = cmd.query + WHERE(builder);
+	builder.db.$debug && builder.db.$debug(q);
+	client.query(q, cmd.value, function(err, response) {
+		client.$done();
+		var rows = response ? response.rows : EMPTYARRAY;
+		if (opt.first)
+			rows = rows.length ? rows[0] : null;
+		builder.$callback(err, rows);
+	});
+}
+
 function list(client, cmd) {
 
 	var builder = cmd.builder;
@@ -236,6 +250,9 @@ exports.run = function(opt, self, cmd) {
 					break;
 				case 'remove':
 					remove(client, cmd);
+					break;
+				case 'query':
+					query(client, cmd);
 					break;
 				default:
 					cmd.builder.$callback(new Error('Operation "' + cmd.type + '" not found'));

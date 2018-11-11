@@ -313,6 +313,15 @@ DP.modify = function(table, value, insert) {
 	return builder;
 };
 
+DP.query = function(query, value) {
+	var self = this;
+	var builder = new QueryBuilder(self, 'query');
+	self.$commands.push({ type: 'query', builder: builder, query: query, value: value });
+	self.$op && clearImmediate(self.$op);
+	self.$op = setImmediate(self.$next);
+	return builder;
+};
+
 DP.remove = function(table) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'remove');
