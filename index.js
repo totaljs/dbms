@@ -624,19 +624,38 @@ QB.paginate = function(page, limit, maxlimit) {
 
 QB.callback = function(callback) {
 	var self = this;
+
+	// Because of JOINS
+	if (self.options.callback && self.$joinmeta && self.$joinmeta.owner && !self.$joinmeta.callback) {
+		self.$joinmeta.callback = true;
+		self.$joinmeta.owner.options.callback = self.options.callback;
+	}
+
 	self.options.callback = callback;
 	return self;
 };
 
 QB.data = function(fn) {
 	var self = this;
-	self.options.callbackok = fn;
+
+	// Because of JOINS
+	if (self.$joinmeta && self.$joinmeta.owner)
+		self.$joinmeta.owner.options.callbackok = fn;
+	else
+		self.options.callbackok = fn;
+
 	return self;
 };
 
 QB.fail = function(fn) {
 	var self = this;
-	self.options.callbackno = fn;
+
+	// Because of JOINS
+	if (self.$joinmeta && self.$joinmeta.owner)
+		self.$joinmeta.owner.options.callbackno = fn;
+	else
+		self.options.callbackno = fn;
+
 	return self;
 };
 
@@ -649,12 +668,14 @@ QB.on = function(a, b) {
 
 QB.join = function(field, table) {
 
-	var self = this;
+	if (table == null)
+		table = field;
 
+	var self = this;
 	var builder = new QueryBuilder(self.db, 'find');
 
 	builder.table(table);
-	builder.$joinmeta = { unique: new Set(), field: field, a: '', b: '' };
+	builder.$joinmeta = { unique: new Set(), field: field, a: '', b: '', owner: self.$joinmeta ? self.$joinmeta.owner : self };
 
 	if (self.$joins)
 		self.$joins.push(builder);
