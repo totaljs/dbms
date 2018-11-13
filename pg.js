@@ -10,6 +10,64 @@ function createpool(opt) {
 	return POOLS[opt.id] ? POOLS[opt.id] : (POOLS[opt.id] = opt.options.native ? new Database.native.Pool(opt.options) : new Database.Pool(opt.options));
 }
 
+function createclient(opt) {
+	return opt.options.native ? new Database.native.Client(opt.options) : new Database.Client(opt.options);
+}
+
+function joins(response, builder) {
+
+	// Prepares unique values for joining
+	if (response instanceof Array && response.length) {
+		for (var i = 0; i < response.length; i++) {
+			var item = response[i];
+			for (var j = 0; j < builder.$joins.length; j++) {
+				var join = builder.$joins[j];
+				var meta = join.$joinmeta;
+				var val = item[meta.b];
+				if (val !== undefined) {
+					if (val instanceof Array) {
+						for (var k = 0; k < val.length; k++)
+							meta.unique.add(val[k]);
+					} else
+						meta.unique.add(val);
+				}
+			}
+		}
+	} else if (response) {
+		for (var j = 0; j < builder.$joins.length; j++) {
+			var join = builder.$joins[j];
+			var meta = join.$joinmeta;
+			var val = response[meta.b];
+			if (val !== undefined)
+				meta.unique.add(val);
+		}
+	}
+
+	builder.$joins.dbmswait(function(join, next) {
+		var meta = join.$joinmeta;
+		meta.can = true;
+		join.in(meta.a, Array.from(meta.unique));
+		join.callback(function(err, data) {
+
+			if (err) {
+				builder.$callback(err, response);
+				builder.$joins.length = null;
+				return;
+			}
+
+			if (response instanceof Array) {
+				for (var i = 0; i < response.length; i++) {
+					var row = response[i];
+					row[meta.field] = join.options.first ? join.db._findItem(data, meta.a, row[meta.b]) : join.db._findItems(data, meta.a, row[meta.b]);
+				}
+			} else if (response)
+				response[meta.field] = join.options.first ? join.db._findItem(data, meta.a, response[meta.b]) : join.db._findItems(data, meta.a, response[meta.b]);
+
+			next();
+		});
+	}, () => builder.$callback(null, response));
+}
+
 function select(client, cmd) {
 
 	var builder = cmd.builder;
@@ -17,13 +75,19 @@ function select(client, cmd) {
 	var q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder);
 
 	builder.db.$debug && builder.db.$debug(q);
-
 	client.query(q, function(err, response) {
+
 		client.$done();
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (opt.first)
 			rows = rows.length ? rows[0] : null;
-		builder.$callback(err, rows);
+
+		// checks joins
+		if (builder.$joins) {
+			joins(rows, builder);
+			setImmediate(builder.db.$next);
+		} else
+			builder.$callback(err, rows);
 	});
 }
 
@@ -223,11 +287,13 @@ function remove(client, cmd) {
 }
 
 exports.run = function(opt, self, cmd) {
-	createpool(opt).connect(function(err, client, done) {
+	var conn = opt.options.pooling ? createpool(opt) : createclient(opt);
+	conn.connect(function(err, client, done) {
+
 		if (err) {
 			cmd.builder.$callback(err);
 		} else {
-			client.$done = done;
+			client.$done = done || client.end;
 			switch (cmd.type) {
 				case 'find':
 					select(client, cmd);
@@ -456,9 +522,11 @@ function WHERE(builder, scalar, group) {
 function FIELDS(builder) {
 	var output = '';
 	var fields = builder.options.fields;
-	if (fields) {
+	if (fields && fields.length) {
 		for (var i = 0; i < fields.length; i++)
 			output += (output ? ',' : '') + fields[i];
+		if (builder.$joinmeta)
+			output += ',' + builder.$joinmeta.a;
 	}
 	return output ? output : '*';
 }
@@ -522,3 +590,4 @@ function dateToString(dt) {
 
 	return arr[0] + '-' + arr[1] + '-' + arr[2] + ' ' + arr[3] + ':' + arr[4] + ':' + arr[5];
 }
+

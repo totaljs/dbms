@@ -132,6 +132,15 @@ DP.next = function() {
 	var self = this;
 	var cmd = self.$commands.shift();
 	if (cmd) {
+
+		if (cmd.builder && cmd.builder.$joinmeta) {
+			if (!cmd.builder.$joinmeta.can) {
+				self.$commands.push(cmd);
+				setImmediate(self.$next);
+				return;
+			}
+		}
+
 		if (cmd.type === 'task') {
 			cmd.value.call(self, self.$outputall, self.$lastoutput);
 			setImmediate(self.$next);
@@ -192,7 +201,6 @@ DP.next = function() {
 			self.$callbackno && self.$callbackno(err);
 		else
 			self.$callbackok && self.$callbackok(self.$output);
-
 	}
 	return self;
 };
@@ -208,8 +216,10 @@ DP.find = function(table) {
 	var builder = new QueryBuilder(self, 'find');
 	builder.table(table);
 	self.$commands.push({ type: 'find', builder: builder });
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+	if (!self.$joinmeta) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
 	return builder;
 };
 
@@ -630,6 +640,31 @@ QB.fail = function(fn) {
 	return self;
 };
 
+QB.on = function(a, b) {
+	var self = this;
+	self.$joinmeta.a = a;
+	self.$joinmeta.b = b;
+	return self;
+};
+
+QB.join = function(field, table) {
+
+	var self = this;
+
+	var builder = new QueryBuilder(self.db, 'find');
+
+	builder.table(table);
+	builder.$joinmeta = { unique: new Set(), field: field, a: '', b: '' };
+
+	if (self.$joins)
+		self.$joins.push(builder);
+	else
+		self.$joins = [builder];
+
+	self.db.$commands.push({ type: 'find', builder: builder });
+	return builder;
+};
+
 QB.must = QB.validate = function(err) {
 	var self = this;
 	self.options.validate = err || 'unhandled exception';
@@ -777,6 +812,9 @@ exports.init = function(name, connection) {
 	var tmp = {};
 	var arr;
 
+	var pooling = q.pooling ? q.pooling !== '0' && q.pooling !== 'false' && q.pooling !== 'off' : true;
+	var native = q.native === '1' || q.native === 'true' || q.native === 'on';
+
 	switch (opt.protocol) {
 		case 'postgresql:':
 		case 'postgres:':
@@ -794,7 +832,8 @@ exports.init = function(name, connection) {
 			tmp.max = +(q.max || '4');
 			tmp.min = +(q.min || '2');
 			tmp.idleTimeoutMillis = +(q.timeout || '1000');
-			tmp.native = q.native === '1' || q.native === 'true' || q.native === 'on';
+			tmp.native = native;
+			tmp.pooling = pooling;
 			CONN[name] = { id: name, db: 'pg', options: tmp };
 			break;
 	}
@@ -955,4 +994,79 @@ QB.gridsort = function(sort) {
 		index = sort.lastIndexOf(' ');
 	builder.sort(sort.substring(0, index), sort.substring(index + 1) === 'desc');
 	return builder;
+};
+
+Array.prototype.dbmswait = function(onItem, callback, thread, tmp) {
+
+	var self = this;
+	var init = false;
+
+	// INIT
+	if (!tmp) {
+
+		if (typeof(callback) !== 'function') {
+			thread = callback;
+			callback = null;
+		}
+
+		tmp = {};
+		tmp.pending = 0;
+		tmp.index = 0;
+		tmp.thread = thread;
+
+		// thread === Boolean then array has to be removed item by item
+
+		init = true;
+	}
+
+	var item = thread === true ? self.shift() : self[tmp.index++];
+	if (item === undefined) {
+		if (!tmp.pending) {
+			callback && callback();
+			tmp.cancel = true;
+		}
+		return self;
+	}
+
+	tmp.pending++;
+	onItem.call(self, item, () => setImmediate(next_wait, self, onItem, callback, thread, tmp), tmp.index);
+
+	if (!init || tmp.thread === 1)
+		return self;
+
+	for (var i = 1; i < tmp.thread; i++)
+		self.dbmswait(onItem, callback, 1, tmp);
+
+	return self;
+};
+
+function next_wait(self, onItem, callback, thread, tmp) {
+	tmp.pending--;
+	self.dbmswait(onItem, callback, thread, tmp);
+}
+
+DP._findItem = function(items, field, value) {
+	if (value instanceof Array) {
+		for (var j = 0; j < value.length; j++) {
+			if (items[field] === value[j])
+				return items;
+		}
+	} else if (items[field] === value)
+		return items;
+};
+
+DP._findItems = function(items, field, value) {
+	var arr = [];
+	for (var i = 0, length = items.length; i < length; i++) {
+		if (value instanceof Array) {
+			for (var j = 0; j < value.length; j++) {
+				if (items[i][field] === value[j]) {
+					arr.push(items[i]);
+					break;
+				}
+			}
+		} else if (items[i][field] === value)
+			arr.push(items[i]);
+	}
+	return arr;
 };
