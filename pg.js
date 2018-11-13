@@ -65,7 +65,7 @@ function joins(response, builder) {
 
 			next();
 		});
-	}, () => builder.$callback(null, response));
+	}, () => builder.$callback(null, response), 2);
 }
 
 function select(client, cmd) {
