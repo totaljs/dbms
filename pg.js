@@ -445,12 +445,12 @@ function WHERE(builder, scalar, group) {
 			case 'search':
 				tmp = ESCAPE((!cmd.compare || cmd.compare === '*' ? ('%' + cmd.value + '%') : (cmd.compare === 'beg' ? ('%' + cmd.value) : (cmd.value + '%'))));
 				opuse && condition.length && condition.push(op);
-				condition.push(SCOL + cmd.name + SCOL + ' LIKE ' + tmp);
+				condition.push(SCOL + cmd.name + SCOL + ' ILIKE ' + tmp);
 				break;
 			case 'fulltext':
 				tmp = ESCAPE('%' + cmd.value.toLowerCase() + '%');
 				opuse && condition.length && condition.push(op);
-				condition.push('LOWER("' + cmd.name + '") LIKE ' + tmp);
+				condition.push('LOWER("' + cmd.name + '") ILIKE ' + tmp);
 				break;
 			case 'contains':
 				opuse && condition.length && condition.push(op);
