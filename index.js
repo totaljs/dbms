@@ -3,7 +3,7 @@ const Url = require('url');
 const Qs = require('querystring');
 const CONN = {};
 const CACHE = {};
-const COMPARE = { '<': '<', '>': '>', '>=': '>=', '=>': '>=', '=<': '<=', '<=': '<=', '==': '=', '===': '=', '!=': '!=', '<>': '!=' };
+const COMPARE = { '<': '<', '>': '>', '>=': '>=', '=>': '>=', '=<': '<=', '<=': '<=', '==': '=', '===': '=', '!=': '!=', '<>': '!=', '=': '=' };
 const MODIFY = { insert: 1, update: 1, modify: 1 };
 
 function promise(fn) {
