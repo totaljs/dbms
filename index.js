@@ -215,7 +215,7 @@ function loggerend(self) {
 	if (self.$logger) {
 		var ln = (self.$logger.builder.options.db === 'default' ? '' : (self.$logger.builder.options.db + '/')) + (self.$logger.builder.options.table || '');
 		NOW = new Date();
-		logger(NOW.format('yyyy-MM-dd HH:mm:ss'), 'DBMS logger: ' + (ln ? (ln + '.') : '') + self.$logger.type + '()', self.$logger.builder.$count + 'x', ((NOW - self.$logger.ts) / 1000) + ' s');
+		logger(NOW.format('yyyy-MM-dd HH:mm:ss'), 'DBMS logger: ' + (ln ? (ln + '.') : '') + self.$logger.type + '()', self.$logger.builder.$count + 'x', ((NOW - self.$logger.ts) / 1000) + 's');
 		self.$logger = null;
 	}
 }
