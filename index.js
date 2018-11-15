@@ -36,12 +36,6 @@ function DBMS(ebuilder) {
 	};
 }
 
-// DBMS.prototype = {
-// 	get counter() {
-// 		return this.$counter ? this.$counter : (this.$counter = new Counter(this));
-// 	}
-// };
-
 const DP = DBMS.prototype;
 
 DP.blob = function(table) {
@@ -219,9 +213,9 @@ function loggerbeg(self, cmd) {
 
 function loggerend(self) {
 	if (self.$logger) {
-		var ln = (self.$logger.builder.options.db === 'default' ? '' : (self.$logger.builder.options.db + '/')) + self.$logger.builder.options.table;
+		var ln = (self.$logger.builder.options.db === 'default' ? '' : (self.$logger.builder.options.db + '/')) + (self.$logger.builder.options.table || '');
 		NOW = new Date();
-		logger(NOW.format('yyyy-MM-dd HH:mm:ss'), 'DBMS logger: ' + ln + '.' + self.$logger.type + '()', ((NOW - self.$logger.ts) / 1000) + ' s');
+		logger(NOW.format('yyyy-MM-dd HH:mm:ss'), 'DBMS logger: ' + (ln ? (ln + '.') : '') + self.$logger.type + '()', self.$logger.builder.$count + 'x', ((NOW - self.$logger.ts) / 1000) + ' s');
 		self.$logger = null;
 	}
 }
@@ -262,10 +256,10 @@ DP.list = DP.listing = function(table) {
 
 DP.read = DP.one = function(table) {
 	var self = this;
-	var builder = new QueryBuilder(self, 'find');
+	var builder = new QueryBuilder(self, 'read');
 	builder.table(table);
 	builder.first();
-	self.$commands.push({ type: 'find', builder: builder });
+	self.$commands.push({ type: 'read', builder: builder });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -419,6 +413,9 @@ QB.$callback = function(err, value, count) {
 	var opt = self.options;
 
 	self.$log && self.log();
+
+	if (logger)
+		self.$count = value instanceof Array ? value.length : value != null ? 1 : 0;
 
 	if (opt.type === 'list') {
 		value = { items: value, count: count };

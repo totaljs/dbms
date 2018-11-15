@@ -296,6 +296,7 @@ exports.run = function(opt, self, cmd) {
 			client.$done = done || client.end;
 			switch (cmd.type) {
 				case 'find':
+				case 'read':
 					select(client, cmd);
 					break;
 				case 'list':

@@ -6,6 +6,7 @@ exports.run = function(opt, self, cmd) {
 
 	switch (cmd.type) {
 		case 'find':
+		case 'read':
 			WHERE(db(cmd.builder.options.table).find(), cmd.builder);
 			break;
 		case 'list':
