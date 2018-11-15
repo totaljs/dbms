@@ -4,7 +4,6 @@ const POOLS = {};
 const REG_ESCAPE_1 = /'/g;
 const REG_ESCAPE_2 = /\\/g;
 const EMPTYARRAY = [];
-const SCOL = '"';
 
 function createpool(opt) {
 	return POOLS[opt.id] ? POOLS[opt.id] : (POOLS[opt.id] = opt.options.native ? new Database.native.Pool(opt.options) : new Database.Pool(opt.options));
@@ -143,10 +142,10 @@ function scalar(client, cmd) {
 		case 'sum':
 		case 'max':
 		case 'count':
-			q = 'SELECT ' + cmd.scalar.toUpperCase() + (cmd.scalar !== 'count' ? ('("' + cmd.name + '")') : '(1)') + '::int as dbmsvalue FROM ' + opt.table;
+			q = 'SELECT ' + cmd.scalar.toUpperCase() + (cmd.scalar !== 'count' ? ('(' + cmd.name + ')') : '(1)') + '::int as dbmsvalue FROM ' + opt.table;
 			break;
 		case 'group':
-			q = 'SELECT "' + cmd.name + '", COUNT(1)::int as count FROM ' + opt.table;
+			q = 'SELECT ' + cmd.name + ', COUNT(1)::int as count FROM ' + opt.table;
 			break;
 	}
 
@@ -188,7 +187,7 @@ function insert(client, cmd) {
 		}
 
 
-		fields.push(SCOL + key + SCOL);
+		fields.push(key);
 		values.push('$' + index++);
 		params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.value) : val);
 	}
@@ -243,11 +242,11 @@ function modify(client, cmd) {
 			case '/':
 				params.push(val ? val : 0);
 				key = key.substring(1);
-				type = SCOL + key + '"=COALESCE("' + key + '",0)' + c + '$' + (index++);
+				type = key + '=COALESCE(' + key + ',0)' + c + '$' + (index++);
 				break;
 			default:
 				params.push(val);
-				type = SCOL + key + '"=$' + (index++);
+				type = key + '=$' + (index++);
 				break;
 		}
 		type && fields.push(type);
@@ -413,7 +412,7 @@ function WHERE(builder, scalar, group) {
 			case 'where':
 				tmp = ESCAPE(cmd.value);
 				opuse && condition.length && condition.push(op);
-				condition.push(SCOL + cmd.name + SCOL + (tmp == null && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
+				condition.push(cmd.name + (tmp == null && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
 				break;
 			case 'in':
 				opuse && condition.length && condition.push(op);
@@ -423,9 +422,9 @@ function WHERE(builder, scalar, group) {
 					tmp = [];
 					for (var j = 0; j < cmd.value.length; j++)
 						tmp.push(ESCAPE(cmd.value[j]));
-					condition.push(SCOL + cmd.name + SCOL + ' IN (' + tmp.join(',') + ')');
+					condition.push(cmd.name + ' IN (' + tmp.join(',') + ')');
 				} else
-					condition.push(SCOL + cmd.name + SCOL + '=' + ESCAPE(cmd.value));
+					condition.push(cmd.name + '=' + ESCAPE(cmd.value));
 				break;
 			case 'notin':
 				opuse && condition.length && condition.push(op);
@@ -435,31 +434,31 @@ function WHERE(builder, scalar, group) {
 					tmp = [];
 					for (var j = 0; j < cmd.value.length; j++)
 						tmp.push(ESCAPE(cmd.value[j]));
-					condition.push(SCOL + cmd.name + SCOL + ' NOT IN (' + tmp.join(',') + ')');
+					condition.push(cmd.name + ' NOT IN (' + tmp.join(',') + ')');
 				} else
-					condition.push(SCOL + cmd.name + SCOL + '<>' + ESCAPE(cmd.value));
+					condition.push(cmd.name + '<>' + ESCAPE(cmd.value));
 				break;
 			case 'between':
 				opuse && condition.length && condition.push(op);
-				condition.push('("' + cmd.name + '">=' + ESCAPE(cmd.a) + ' AND "' + cmd.name + '"<=' + ESCAPE(cmd.b) + ')');
+				condition.push('(' + cmd.name + '>=' + ESCAPE(cmd.a) + ' AND ' + cmd.name + '<=' + ESCAPE(cmd.b) + ')');
 				break;
 			case 'search':
 				tmp = ESCAPE((!cmd.compare || cmd.compare === '*' ? ('%' + cmd.value + '%') : (cmd.compare === 'beg' ? ('%' + cmd.value) : (cmd.value + '%'))));
 				opuse && condition.length && condition.push(op);
-				condition.push(SCOL + cmd.name + SCOL + ' ILIKE ' + tmp);
+				condition.push(cmd.name + ' ILIKE ' + tmp);
 				break;
 			case 'fulltext':
 				tmp = ESCAPE('%' + cmd.value.toLowerCase() + '%');
 				opuse && condition.length && condition.push(op);
-				condition.push('LOWER("' + cmd.name + '") ILIKE ' + tmp);
+				condition.push('LOWER(' + cmd.name + ') ILIKE ' + tmp);
 				break;
 			case 'contains':
 				opuse && condition.length && condition.push(op);
-				condition.push('LENGTH("' + cmd.name + +'"::text)>0');
+				condition.push('LENGTH(' + cmd.name + +'::text)>0');
 				break;
 			case 'empty':
 				opuse && condition.length && condition.push(op);
-				condition.push('("' + cmd.name + '" IS NULL OR LENGTH("' + cmd.name + +'"::text)=0)');
+				condition.push('(' + cmd.name + ' IS NULL OR LENGTH(' + cmd.name + +'::text)=0)');
 				break;
 			case 'month':
 			case 'year':
@@ -467,7 +466,7 @@ function WHERE(builder, scalar, group) {
 			case 'hour':
 			case 'minute':
 				opuse && condition.length && condition.push(op);
-				condition.push('EXTRACT(' + cmd.type + ' from "' + cmd.name + '")' + cmd.compare + ESCAPE(cmd.value));
+				condition.push('EXTRACT(' + cmd.type + ' from ' + cmd.name + ')' + cmd.compare + ESCAPE(cmd.value));
 				break;
 			case 'code':
 				opuse && condition.length && condition.push(op);
@@ -487,7 +486,7 @@ function WHERE(builder, scalar, group) {
 				op = 'AND';
 				break;
 			case 'sort':
-				sort.push(SCOL + cmd.name + SCOL + ' ' + (cmd.desc ? 'DESC' : 'ASC'));
+				sort.push(cmd.name + ' ' + (cmd.desc ? 'DESC' : 'ASC'));
 				break;
 			case 'regexp':
 				tmp = cmd.value.toString().substring(1);
@@ -498,7 +497,7 @@ function WHERE(builder, scalar, group) {
 				} else
 					tmp = tmp.substring(0, tmp.length - 1);
 				opuse && condition.length && condition.push(op);
-				condition.push(SCOL + cmd.name + SCOL + g + '\'' + tmp + '\'');
+				condition.push(cmd.name + g + '\'' + tmp + '\'');
 				break;
 		}
 		opuse = true;
