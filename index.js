@@ -18,6 +18,8 @@ function promise(fn) {
 	});
 }
 
+var logger;
+
 function DBMS(ebuilder) {
 	var self = this;
 	self.$commands = [];
@@ -129,8 +131,12 @@ DP.get = function(path) {
 };
 
 DP.next = function() {
+
 	var self = this;
 	var cmd = self.$commands.shift();
+
+	logger && loggerend(self);
+
 	if (cmd) {
 
 		if (cmd.builder && cmd.builder.$joinmeta) {
@@ -192,6 +198,7 @@ DP.next = function() {
 			if (MODIFY[cmd.type] && cmd.value && typeof(cmd.value.$clean) === 'function')
 				cmd.value = cmd.value.$clean();
 			var conn = CONN[cmd.builder.options.db];
+			logger && loggerbeg(self, cmd);
 			require('./' + conn.db).run(conn, self, cmd);
 		}
 	} else {
@@ -204,6 +211,20 @@ DP.next = function() {
 	}
 	return self;
 };
+
+function loggerbeg(self, cmd) {
+	cmd.ts = new Date();
+	self.$logger = cmd;
+}
+
+function loggerend(self) {
+	if (self.$logger) {
+		var ln = (self.$logger.builder.options.db === 'default' ? '' : (self.$logger.builder.options.db + '/')) + self.$logger.builder.options.table;
+		NOW = new Date();
+		logger(NOW.format('yyyy-MM-dd HH:mm:ss'), 'DBMS logger: ' + ln + '.' + self.$logger.type + '()', ((NOW - self.$logger.ts) / 1000) + ' s');
+		self.$logger = null;
+	}
+}
 
 DP.make = function(fn) {
 	var self = this;
@@ -370,7 +391,7 @@ QB.log = function(msg, user) {
 		NOW = new Date();
 		self.$log = (self.$log ? self.$log : '') + NOW.format('yyyy-MM-dd HH:mm:ss') + ' | '  + self.options.table.padRight(25) + ': ' + (user ? '[' + user.padRight(20) + '] ' : '') + msg + '\n';
 	} else if (self.$log) {
-		Fs.appendFile(F.path.logs('dmbs.log'), self.$log, NOOP);
+		Fs.appendFile(F.path.logs('dbms.log'), self.$log, NOOP);
 		self.$log = null;
 	}
 	return self;
@@ -868,6 +889,13 @@ global.DBMS = function(err) {
 		err.call(db, db);
 	} else
 		return new exports.DBMS(err);
+};
+
+global.DBMS.logger = function(fn) {
+	if (fn === undefined)
+		logger = console.log;
+	else
+		logger = fn;
 };
 
 // Total.js framework
