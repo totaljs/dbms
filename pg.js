@@ -13,60 +13,6 @@ function createclient(opt) {
 	return opt.options.native ? new Database.native.Client(opt.options) : new Database.Client(opt.options);
 }
 
-function joins(response, builder) {
-
-	// Prepares unique values for joining
-	if (response instanceof Array && response.length) {
-		for (var i = 0; i < response.length; i++) {
-			var item = response[i];
-			for (var j = 0; j < builder.$joins.length; j++) {
-				var join = builder.$joins[j];
-				var meta = join.$joinmeta;
-				var val = item[meta.b];
-				if (val !== undefined) {
-					if (val instanceof Array) {
-						for (var k = 0; k < val.length; k++)
-							meta.unique.add(val[k]);
-					} else
-						meta.unique.add(val);
-				}
-			}
-		}
-	} else if (response) {
-		for (var j = 0; j < builder.$joins.length; j++) {
-			var join = builder.$joins[j];
-			var meta = join.$joinmeta;
-			var val = response[meta.b];
-			if (val !== undefined)
-				meta.unique.add(val);
-		}
-	}
-
-	builder.$joins.dbmswait(function(join, next) {
-		var meta = join.$joinmeta;
-		meta.can = true;
-		join.in(meta.a, Array.from(meta.unique));
-		join.callback(function(err, data) {
-
-			if (err) {
-				builder.$callback(err, response);
-				builder.$joins.length = null;
-				return;
-			}
-
-			if (response instanceof Array) {
-				for (var i = 0; i < response.length; i++) {
-					var row = response[i];
-					row[meta.field] = join.options.first ? join.db._findItem(data, meta.a, row[meta.b]) : join.db._findItems(data, meta.a, row[meta.b]);
-				}
-			} else if (response)
-				response[meta.field] = join.options.first ? join.db._findItem(data, meta.a, response[meta.b]) : join.db._findItems(data, meta.a, response[meta.b]);
-
-			next();
-		});
-	}, () => builder.$callback(null, response), 3);
-}
-
 function select(client, cmd) {
 
 	var builder = cmd.builder;
@@ -83,7 +29,7 @@ function select(client, cmd) {
 
 		// checks joins
 		if (builder.$joins) {
-			joins(rows, builder);
+			client.$dbms._joins(rows, builder);
 			setImmediate(builder.db.$next);
 		} else
 			builder.$callback(err, rows);
@@ -288,6 +234,8 @@ function remove(client, cmd) {
 exports.run = function(opt, self, cmd) {
 	var conn = opt.options.pooling ? createpool(opt) : createclient(opt);
 	conn.connect(function(err, client, done) {
+
+		client.$dbms = self;
 
 		if (err) {
 			cmd.builder.$callback(err);

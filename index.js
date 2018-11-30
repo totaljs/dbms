@@ -725,7 +725,7 @@ QB.query = function(value) {
 QB.or = function(fn) {
 	var self = this;
 	self.$commands.push({ type: 'or' });
-	fn();
+	fn.call(self, self);
 	self.$commands.push({ type: 'end' });
 	return self;
 };
@@ -875,6 +875,12 @@ exports.init = function(name, connection) {
 			tmp.pooling = pooling;
 			CONN[name] = { id: name, db: 'pg', options: tmp };
 			break;
+		case 'mongodb:':
+		case 'mongo:':
+			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database };
+			break;
+
+
 	}
 
 	return exports;
@@ -1115,4 +1121,58 @@ DP._findItems = function(items, field, value) {
 			arr.push(items[i]);
 	}
 	return arr;
+};
+
+DP._joins = function(response, builder) {
+
+	// Prepares unique values for joining
+	if (response instanceof Array && response.length) {
+		for (var i = 0; i < response.length; i++) {
+			var item = response[i];
+			for (var j = 0; j < builder.$joins.length; j++) {
+				var join = builder.$joins[j];
+				var meta = join.$joinmeta;
+				var val = item[meta.b];
+				if (val !== undefined) {
+					if (val instanceof Array) {
+						for (var k = 0; k < val.length; k++)
+							meta.unique.add(val[k]);
+					} else
+						meta.unique.add(val);
+				}
+			}
+		}
+	} else if (response) {
+		for (var j = 0; j < builder.$joins.length; j++) {
+			var join = builder.$joins[j];
+			var meta = join.$joinmeta;
+			var val = response[meta.b];
+			if (val !== undefined)
+				meta.unique.add(val);
+		}
+	}
+
+	builder.$joins.dbmswait(function(join, next) {
+		var meta = join.$joinmeta;
+		meta.can = true;
+		join.in(meta.a, Array.from(meta.unique));
+		join.callback(function(err, data) {
+
+			if (err) {
+				builder.$callback(err, response);
+				builder.$joins.length = null;
+				return;
+			}
+
+			if (response instanceof Array) {
+				for (var i = 0; i < response.length; i++) {
+					var row = response[i];
+					row[meta.field] = join.options.first ? join.db._findItem(data, meta.a, row[meta.b]) : join.db._findItems(data, meta.a, row[meta.b]);
+				}
+			} else if (response)
+				response[meta.field] = join.options.first ? join.db._findItem(data, meta.a, response[meta.b]) : join.db._findItems(data, meta.a, response[meta.b]);
+
+			next();
+		});
+	}, () => builder.$callback(null, response), 3);
 };
