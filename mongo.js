@@ -1,6 +1,18 @@
-const MongoClient = require('mongodb').MongoClient;
+const MongoDB = require('mongodb');
+const MongoClient = MongoDB.MongoClient;
 const EMPTYARRAY = [];
 const INSERTPROJECTION = { projection: { '_id': 1 }};
+const BUCKETNAME = { bucketName: 'db' };
+
+global.ObjectID = MongoDB.ObjectID;
+
+MongoDB.ObjectID.parse = function(value) {
+	try {
+		return MongoDB.ObjectID.createFromHexString(value);
+	} catch (e) {
+		return null;
+	}
+};
 
 function select(client, cmd) {
 
@@ -317,10 +329,57 @@ exports.run = function(opt, self, cmd) {
 	});
 };
 
-exports.blob_read = function(opt, id, callback) {
+exports.blob_read = function(opt, id, callback, conn) {
+	var client = new MongoClient(opt.options, { useNewUrlParser: true });
+
+	client.connect(function(err) {
+
+		if (err) {
+			callback(err);
+			return;
+		}
+
+		if (conn.table && conn.table !== 'default')
+			BUCKETNAME.bucketName = conn.table;
+		else
+			BUCKETNAME.bucketName = 'db';
+
+		var done = () => client.close();
+		var bucket = new MongoDB.GridFSBucket(client.db(opt.database), BUCKETNAME);
+		var stream = bucket.openDownloadStream(typeof(id) === 'string' ? ObjectID.parse(id) : id);
+
+		stream.on('error', done);
+		stream.on('end', done);
+
+		callback(null, stream);
+	});
 };
 
-exports.blob_write = function(opt, stream, name, callback) {
+exports.blob_write = function(opt, stream, name, callback, conn) {
+	var client = new MongoClient(opt.options, { useNewUrlParser: true });
+	client.connect(function(err) {
+
+		if (err) {
+			callback(err);
+			return;
+		}
+
+		if (conn.table && conn.table !== 'default')
+			BUCKETNAME.bucketName = conn.table;
+		else
+			BUCKETNAME.bucketName = 'db';
+
+		var bucket = new MongoDB.GridFSBucket(client.db(opt.database), BUCKETNAME);
+		var writer = bucket.openUploadStream(name);
+
+		stream.pipe(writer).on('error', function(err) {
+			client.close();
+			callback(err);
+		}).on('finish', function() {
+			client.close();
+			callback(null, writer.id);
+		});
+	});
 };
 
 function eqgtlt(cmd) {

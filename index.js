@@ -55,10 +55,10 @@ DP.blob = function(table) {
 
 	return {
 		write: function(stream, filename, callback) {
-			driver.blob_write(conn, stream, filename, callback);
+			driver.blob_write(conn, stream, filename, callback, cache);
 		},
 		read: function(id, callback) {
-			driver.blob_read(conn, id, callback);
+			driver.blob_read(conn, id, callback, cache);
 		}
 	};
 };
