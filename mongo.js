@@ -124,31 +124,25 @@ function scalar(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q;
+	var filter = WHERE(builder);
+
+	// builder.db.$debug && builder.db.$debug(q);
 
 	switch (cmd.scalar) {
+		case 'count':
+			client.db(client.$database).collection(opt.table).estimatedDocumentCount(filter.where, function(err, count) {
+				client.close();
+				builder.$callback(err, count);
+			});
+			break;
 		case 'avg':
 		case 'min':
 		case 'sum':
 		case 'max':
-		case 'count':
-			q = 'SELECT ' + cmd.scalar.toUpperCase() + (cmd.scalar !== 'count' ? ('(' + cmd.name + ')') : '(1)') + '::int as dbmsvalue FROM ' + opt.table;
-			break;
 		case 'group':
-			q = 'SELECT ' + cmd.name + ', COUNT(1)::int as count FROM ' + opt.table;
+			builder.$callback('Not implemented');
 			break;
 	}
-
-	q = q + WHERE(builder, false, cmd.scalar === 'group' ? cmd.name : null);
-	builder.db.$debug && builder.db.$debug(q);
-
-	client.query(q, function(err, response) {
-		client.close();
-		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
-		if (cmd.scalar !== 'group')
-			rows = rows.length ? (rows[0].dbmsvalue || 0) : 0;
-		builder.$callback(err, rows);
-	});
 }
 
 function insert(client, cmd) {
@@ -176,12 +170,12 @@ function insert(client, cmd) {
 		params[key] = val == null ? null : typeof(val) === 'function' ? val(cmd.value) : val;
 	}
 
+	// builder.db.$debug && builder.db.$debug();
+
 	client.db(client.$database).collection(opt.table).insertOne(params, function(err, response) {
 		client.close();
 		builder.$callback(err, response && response.result && response.result.n ? 1 : 0);
 	});
-
-	// builder.db.$debug && builder.db.$debug();
 }
 
 function insertexists(client, cmd) {
