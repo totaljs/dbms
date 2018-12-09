@@ -283,11 +283,11 @@ exports.blob_remove = function(opt, id, callback) {
 	createpool(opt).connect(function(err, client, done) {
 		if (err) {
 			done && done();
-			callback(err);
+			callback && callback(err);
 		} else {
 			client.query('DELETE FROM pg_largeobject WHERE loid=' + id, function(err) {
 				done();
-				callback(err);
+				callback && callback(err);
 			});
 		}
 	});

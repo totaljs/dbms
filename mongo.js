@@ -381,7 +381,7 @@ exports.blob_remove = function(opt, id, callback, conn) {
 	client.connect(function(err) {
 
 		if (err) {
-			callback(err);
+			callback && callback(err);
 			return;
 		}
 
@@ -390,10 +390,9 @@ exports.blob_remove = function(opt, id, callback, conn) {
 		else
 			BUCKETNAME.bucketName = 'db';
 
-		var done = () => client.close();
 		var bucket = new MongoDB.GridFSBucket(client.db(opt.database), BUCKETNAME);
 		bucket.delete(id, function(err) {
-			done();
+			client.close();
 			callback && callback(err);
 		});
 	});
