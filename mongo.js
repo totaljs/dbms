@@ -362,8 +362,9 @@ exports.blob_write = function(opt, stream, name, callback, conn) {
 		else
 			BUCKETNAME.bucketName = 'db';
 
+		var opt = global.U ? { contentType: U.getContentType(name) } : null;
 		var bucket = new MongoDB.GridFSBucket(client.db(opt.database), BUCKETNAME);
-		var writer = bucket.openUploadStream(name);
+		var writer = bucket.openUploadStream(name, opt);
 
 		stream.pipe(writer).on('error', function(err) {
 			client.close();
