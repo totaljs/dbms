@@ -277,6 +277,22 @@ exports.run = function(opt, self, cmd) {
 	});
 };
 
+exports.blob_remove = function(opt, id, callback) {
+	if (typeof(id) === 'string')
+		id = +id;
+	createpool(opt).connect(function(err, client, done) {
+		if (err) {
+			done && done();
+			callback(err);
+		} else {
+			client.query('DELETE FROM pg_largeobject WHERE loid=' + id, function(err) {
+				done();
+				callback(err);
+			});
+		}
+	});
+});
+
 exports.blob_read = function(opt, id, callback) {
 
 	if (typeof(id) === 'string')

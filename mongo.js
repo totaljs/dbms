@@ -376,6 +376,29 @@ exports.blob_write = function(opt, stream, name, callback, conn) {
 	});
 };
 
+exports.blob_remove = function(opt, id, callback, conn) {
+	var client = new MongoClient(opt.options, { useNewUrlParser: true });
+	client.connect(function(err) {
+
+		if (err) {
+			callback(err);
+			return;
+		}
+
+		if (conn.table && conn.table !== 'default')
+			BUCKETNAME.bucketName = conn.table;
+		else
+			BUCKETNAME.bucketName = 'db';
+
+		var done = () => client.close();
+		var bucket = new MongoDB.GridFSBucket(client.db(opt.database), BUCKETNAME);
+		bucket.delete(id, function(err) {
+			done();
+			callback && callback(err);
+		});
+	});
+};
+
 function eqgtlt(cmd) {
 	switch (cmd.compare) {
 		case '>':

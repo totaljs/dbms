@@ -59,6 +59,9 @@ DP.blob = function(table) {
 		},
 		read: function(id, callback) {
 			driver.blob_read(conn, id, callback, cache);
+		},
+		remove: function(id, callback) {
+			driver.blob_remove(conn, id, callback, cache);
 		}
 	};
 };
