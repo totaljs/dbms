@@ -74,9 +74,8 @@ function query(client, cmd) {
 	if (filter.sort)
 		options.sort = filter.sort;
 
-	var col = client.db(client.$database).collection(opt.table);
-
-	cmd.query(col, function(err, response) {
+	var col = client.db(client.$database).collection(cmd.query);
+	cmd.value(col, function(err, response) {
 		if (opt.first && response instanceof Array)
 			response = response[0];
 		client.close();
