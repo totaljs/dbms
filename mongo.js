@@ -233,8 +233,8 @@ function modify(client, cmd) {
 
 	var upd = {};
 
-	increment && (upd['$inc'] = increment);
-	upd['$set'] = params;
+	increment && (upd.$inc = increment);
+	upd.$set = params;
 
 	var col = client.db(client.$database).collection(opt.table);
 	var callback = function(err, response) {
@@ -401,13 +401,13 @@ exports.blob_remove = function(opt, id, callback, conn) {
 function eqgtlt(cmd) {
 	switch (cmd.compare) {
 		case '>':
-			return { '$gt': cmd.value };
+			return { $gt: cmd.value };
 		case '>=':
-			return { '$gte': cmd.value };
+			return { $gte: cmd.value };
 		case '<':
-			return { '$lt': cmd.value };
+			return { $lt: cmd.value };
 		case '<=':
-			return { '$lte': cmd.value };
+			return { $lte: cmd.value };
 	}
 }
 
@@ -435,7 +435,7 @@ function WHERE(builder, scalar, group) {
 			case 'in':
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
-				value = cmd.value instanceof Array ? { '$in': cmd.value } : cmd.value;
+				value = cmd.value instanceof Array ? { $in: cmd.value } : cmd.value;
 				if (tmp) {
 					filter = {};
 					filter[cmd.name] = value;
@@ -446,7 +446,7 @@ function WHERE(builder, scalar, group) {
 			case 'notin':
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
-				value = cmd.value instanceof Array ? { '$nin': cmd.value } : { '$ne': cmd.value };
+				value = cmd.value instanceof Array ? { $nin: cmd.value } : { $ne: cmd.value };
 				if (tmp) {
 					filter = {};
 					filter[cmd.name] = value;
@@ -455,7 +455,7 @@ function WHERE(builder, scalar, group) {
 					condition[cmd.name] = value;
 				break;
 			case 'between':
-				value = { '$gte': cmd.a, '$lte': cmd.b };
+				value = { $gte: cmd.a, $lte: cmd.b };
 				if (tmp) {
 					filter = {};
 					filter[cmd.name] = value;
@@ -483,7 +483,7 @@ function WHERE(builder, scalar, group) {
 					condition[cmd.name] = value;
 				break;
 			case 'contains':
-				value = { '$and': [{ '$exists': true }, { $ne: null }, { $ne: '' }] };
+				value = { $exists: true, $nin: [null, ''] };
 				if (tmp) {
 					filter = {};
 					filter[cmd.name] = value;
@@ -492,7 +492,7 @@ function WHERE(builder, scalar, group) {
 					condition[cmd.name] = value;
 				break;
 			case 'empty':
-				value = { '$and': [{ '$exists': false }, { $eq: null }, { $eq: '' }] };
+				value = { $exists: false, $in: [null, ''] };
 				if (tmp) {
 					filter = {};
 					filter[cmd.name] = value;
@@ -523,7 +523,7 @@ function WHERE(builder, scalar, group) {
 				tmp = [];
 				continue;
 			case 'end':
-				condition['$or'] = tmp;
+				condition.$or = tmp;
 				tmp = null;
 				break;
 			case 'and':
