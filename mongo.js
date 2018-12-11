@@ -505,9 +505,7 @@ function WHERE(builder, scalar, group) {
 			case 'day':
 			case 'hour':
 			case 'minute':
-				// condition[cmd.value] = {}
-				// condition.push('EXTRACT(' + cmd.type + ' from ' + cmd.name + ')' + cmd.compare + ESCAPE(cmd.value));
-				// Not implemented
+				new Error('Not implemented', 'MongoDB doesn\'t support date function for quering.');
 				break;
 			case 'code':
 				if (tmp) {
