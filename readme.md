@@ -5,7 +5,7 @@
 - [__Documentation__](https://wiki.totaljs.com/dbms/01-welcome/)
 - installation `$ npm install dbms`
 - supports Total.js `NoSQL embedded`
-- supports `PostgreSQL`
+- supports `PostgreSQL` and `MongoDB`
 
 ## Initialization
 
