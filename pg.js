@@ -291,7 +291,7 @@ exports.blob_remove = function(opt, id, callback) {
 			});
 		}
 	});
-});
+};
 
 exports.blob_read = function(opt, id, callback) {
 
