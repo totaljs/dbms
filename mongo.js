@@ -196,7 +196,7 @@ function insertexists(client, cmd) {
 function modify(client, cmd) {
 
 	var keys = Object.keys(cmd.value);
-	var params = {};
+	var params = null;
 	var increment = null;
 
 	for (var i = 0; i < keys.length; i++) {
@@ -221,6 +221,7 @@ function modify(client, cmd) {
 				increment[key] = val ? val : 0;
 				break;
 			default:
+				!params && (params = {});
 				params[key] = val;
 				break;
 		}
@@ -234,7 +235,7 @@ function modify(client, cmd) {
 	var upd = {};
 
 	increment && (upd.$inc = increment);
-	upd.$set = params;
+	params && (upd.$set = params);
 
 	var col = client.db(client.$database).collection(opt.table);
 	var callback = function(err, response) {
@@ -284,9 +285,17 @@ exports.run = function(opt, self, cmd) {
 		client.$database = opt.database;
 
 		if (err) {
-			cmd.builder.$callback(err);
+			if (cmd.builder)
+				cmd.builder.$callback(err);
+			else
+				cmd.db.$next(err);
 		} else {
 			switch (cmd.type) {
+				case 'transaction':
+				case 'commit':
+				case 'rollback':
+					cmd.$next(new Error('"' + cmd.type + '" is not implemented.'));
+					break;
 				case 'find':
 				case 'read':
 					select(client, cmd);
