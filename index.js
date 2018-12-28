@@ -334,11 +334,11 @@ DP.save = function(table, isUpdate, obj, fn) {
 	if (obj == null || typeof(obj) === 'function') {
 		fn = obj;
 		obj = isUpdate;
-		isUpdate = !obj.id;
+		isUpdate = !!obj.id;
 	}
 
 	var builder = isUpdate ? this.modify(table, obj) : this.insert(table, obj);
-	fn && fn.call(builder, builder, isUpdate, obj);
+	fn && fn.call(builder, builder, isUpdate, builder.value);
 	return builder;
 };
 
@@ -348,6 +348,11 @@ DP.insert = function(table, value, unique) {
 	builder.table(table);
 	builder.value = value || {};
 	unique && builder.first();
+
+	// Total.js schemas
+	if (builder.value.$clean)
+		builder.value = builder.value.$clean();
+
 	builder.$commandindex = self.$commands.push({ type: 'insert', builder: builder, unique: unique }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
@@ -359,6 +364,11 @@ DP.update = function(table, value, insert) {
 	var builder = new QueryBuilder(self, 'update');
 	builder.table(table);
 	builder.value = value || {};
+
+	// Total.js schemas
+	if (builder.value.$clean)
+		builder.value = builder.value.$clean();
+
 	builder.$commandindex = self.$commands.push({ type: 'update', builder: builder, insert: insert }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
@@ -370,6 +380,11 @@ DP.modify = function(table, value, insert) {
 	var builder = new QueryBuilder(self, 'modify');
 	builder.table(table);
 	builder.value = value || {};
+
+	// Total.js schemas
+	if (builder.value.$clean)
+		builder.value = builder.value.$clean();
+
 	builder.$commandindex = self.$commands.push({ type: 'modify', builder: builder, insert: insert }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
