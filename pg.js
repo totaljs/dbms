@@ -50,6 +50,14 @@ function query(client, cmd) {
 	});
 }
 
+function command(client, sql, cmd) {
+	cmd.db.$debug && cmd.db.$debug(sql);
+	client.query(sql, function(err) {
+		client.$done();
+		cmd.db.$next(err);
+	});
+}
+
 function list(client, cmd) {
 
 	var builder = cmd.builder;
@@ -238,10 +246,20 @@ exports.run = function(opt, self, cmd) {
 		client.$dbms = self;
 
 		if (err) {
-			cmd.builder.$callback(err);
+			if (cmd.builder)
+				cmd.builder.$callback(err);
+			else
+				cmd.db.$next(err);
 		} else {
 			client.$done = done || client.end;
 			switch (cmd.type) {
+				case 'transaction':
+					command(client, 'BEGIN', cmd);
+					break;
+				case 'commit':
+				case 'rollback':
+					command(client, cmd.type.toUpperCase(), cmd);
+					break;
 				case 'find':
 				case 'read':
 					select(client, cmd);

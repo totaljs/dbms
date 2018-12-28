@@ -31,7 +31,8 @@ function DBMS(ebuilder) {
 	// self.$log;
 	// self.$lastoutput;
 
-	self.$next = function() {
+	self.$next = function(err) {
+		err & self.$errors.push(err);
 		self.next();
 	};
 }
@@ -194,7 +195,7 @@ DP.next = function() {
 		} else {
 			if (MODIFY[cmd.type] && cmd.value && typeof(cmd.value.$clean) === 'function')
 				cmd.value = cmd.value.$clean();
-			var conn = CONN[cmd.builder.options.db];
+			var conn = CONN[cmd.conn || cmd.builder.options.db];
 			logger && loggerbeg(self, cmd);
 			require('./' + conn.db).run(conn, self, cmd);
 		}
@@ -310,6 +311,37 @@ DP.group = function(table, prop) {
 	return this.scalar(table, 'group', prop);
 };
 
+DP.begin = DP.transaction = function(conn) {
+	var self = this;
+	self.$commands.push({ type: 'transaction', db: self, conn: conn || 'default' });
+	return self;
+};
+
+DP.commit = function(conn) {
+	var self = this;
+	self.$commands.push({ type: 'commit', db: self, conn: conn || 'default' });
+	return self;
+};
+
+DP.rollback = DP.abort = function(conn) {
+	var self = this;
+	self.$commands.push({ type: 'rollback', db: self, conn: conn || 'default' });
+	return self;
+};
+
+DP.save = function(table, isUpdate, obj, fn) {
+
+	if (obj == null || typeof(obj) === 'function') {
+		fn = obj;
+		obj = isUpdate;
+		isUpdate = !obj.id;
+	}
+
+	var builder = isUpdate ? this.modify(table, obj) : this.insert(table, obj);
+	fn && fn.call(builder, builder, isUpdate);
+	return builder;
+};
+
 DP.insert = function(table, value, unique) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'insert');
@@ -395,16 +427,13 @@ QB.log = function(msg, user) {
 };
 
 QB.table = function(table) {
-
 	var self = this;
 	var cache = CACHE[table];
-
 	if (!cache) {
 		var tmp = table.split('/');
 		cache = { db: tmp.length > 1 ? tmp[0] : 'default', table: tmp.length > 1 ? tmp[1] : tmp[0] };
 		CACHE[table] = cache;
 	}
-
 	self.options.db = cache.db;
 	self.options.table = cache.table;
 	return self;
