@@ -338,7 +338,7 @@ DP.save = function(table, isUpdate, obj, fn) {
 	}
 
 	var builder = isUpdate ? this.modify(table, obj) : this.insert(table, obj);
-	fn && fn.call(builder, builder, isUpdate);
+	fn && fn.call(builder, builder, isUpdate, obj);
 	return builder;
 };
 
