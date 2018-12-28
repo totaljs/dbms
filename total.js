@@ -19,16 +19,16 @@ exports.run = function(opt, self, cmd) {
 			WHERE(db(cmd.builder.options.table).scalar(), cmd.builder);
 			break;
 		case 'insert':
-			WHERE(db(cmd.builder.options.table).insert(cmd.value, cmd.unique), cmd.builder);
+			WHERE(db(cmd.builder.options.table).insert(cmd.builder.value, cmd.unique), cmd.builder);
 			break;
 		case 'update':
-			WHERE(db(cmd.builder.options.table).update(cmd.value, cmd.insert), cmd.builder);
+			WHERE(db(cmd.builder.options.table).update(cmd.builder.value, cmd.insert), cmd.builder);
 			break;
 		case 'modify':
-			WHERE(db(cmd.builder.options.table).modify(cmd.value, cmd.insert), cmd.builder);
+			WHERE(db(cmd.builder.options.table).modify(cmd.builder.value, cmd.insert), cmd.builder);
 			break;
 		case 'remove':
-			WHERE(db(cmd.builder.options.table).remove(cmd.value), cmd.builder);
+			WHERE(db(cmd.builder.options.table).remove(), cmd.builder);
 			break;
 		default:
 			cmd.builder.$callback(new Error('Operation "' + cmd.type + '" not found'));

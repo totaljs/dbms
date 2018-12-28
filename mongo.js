@@ -147,13 +147,13 @@ function scalar(client, cmd) {
 function insert(client, cmd) {
 
 	var builder = cmd.builder;
-	var keys = Object.keys(cmd.value);
+	var keys = Object.keys(cmd.builder.value);
 	var opt = builder.options;
 	var params = {};
 
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
-		var val = cmd.value[key];
+		var val = cmd.builder.value[key];
 		if (val === undefined)
 			continue;
 
@@ -166,7 +166,7 @@ function insert(client, cmd) {
 				break;
 		}
 
-		params[key] = val == null ? null : typeof(val) === 'function' ? val(cmd.value) : val;
+		params[key] = val == null ? null : typeof(val) === 'function' ? val(cmd.builder.value) : val;
 	}
 
 	// builder.db.$debug && builder.db.$debug();
@@ -195,13 +195,13 @@ function insertexists(client, cmd) {
 
 function modify(client, cmd) {
 
-	var keys = Object.keys(cmd.value);
+	var keys = Object.keys(cmd.builder.value);
 	var params = null;
 	var increment = null;
 
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
-		var val = cmd.value[key];
+		var val = cmd.builder.value[key];
 
 		if (val === undefined)
 			continue;
@@ -209,7 +209,7 @@ function modify(client, cmd) {
 		var c = key[0];
 
 		if (typeof(val) === 'function')
-			val = val(cmd.value);
+			val = val(cmd.builder.value);
 
 		switch (c) {
 			case '-':
@@ -242,8 +242,8 @@ function modify(client, cmd) {
 		var count = response && response.result ? response.result.n : 0;
 		if (!count && cmd.insert) {
 			if (cmd.insert !== true)
-				cmd.value = cmd.insert;
-			cmd.builder.options.insert && cmd.builder.options.insert(cmd.value);
+				cmd.builder.value = cmd.insert;
+			cmd.builder.options.insert && cmd.builder.options.insert(cmd.builder.value);
 			insert(client, cmd);
 		} else {
 			client.close();

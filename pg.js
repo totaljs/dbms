@@ -118,7 +118,7 @@ function scalar(client, cmd) {
 function insert(client, cmd) {
 
 	var builder = cmd.builder;
-	var keys = Object.keys(cmd.value);
+	var keys = Object.keys(cmd.builder.value);
 	var params = [];
 	var fields = [];
 	var values = [];
@@ -127,7 +127,7 @@ function insert(client, cmd) {
 
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
-		var val = cmd.value[key];
+		var val = cmd.builder.value[key];
 		if (val === undefined)
 			continue;
 
@@ -143,7 +143,7 @@ function insert(client, cmd) {
 
 		fields.push(key);
 		values.push('$' + index++);
-		params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.value) : val);
+		params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.builder.value) : val);
 	}
 
 	var q = 'INSERT INTO ' + opt.table + ' (' + fields.join(',') + ') VALUES(' + values.join(',') + ')';
@@ -171,14 +171,14 @@ function insertexists(client, cmd) {
 
 function modify(client, cmd) {
 
-	var keys = Object.keys(cmd.value);
+	var keys = Object.keys(cmd.builder.value);
 	var fields = [];
 	var params = [];
 	var index = 1;
 
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
-		var val = cmd.value[key];
+		var val = cmd.builder.value[key];
 
 		if (val === undefined)
 			continue;
@@ -187,7 +187,7 @@ function modify(client, cmd) {
 		var type;
 
 		if (typeof(val) === 'function')
-			val = val(cmd.value);
+			val = val(cmd.builder.value);
 
 		switch (c) {
 			case '-':
@@ -216,8 +216,8 @@ function modify(client, cmd) {
 		rows = rows.length ? rows[0].dbmsvalue : 0;
 		if (!rows && cmd.insert) {
 			if (cmd.insert !== true)
-				cmd.value = cmd.insert;
-			cmd.builder.options.insert && cmd.builder.options.insert(cmd.value);
+				cmd.builder.value = cmd.insert;
+			cmd.builder.options.insert && cmd.builder.options.insert(cmd.builder.value);
 			insert(client, cmd);
 		} else {
 			client.$done();

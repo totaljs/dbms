@@ -346,8 +346,9 @@ DP.insert = function(table, value, unique) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'insert');
 	builder.table(table);
-	builder.first();
-	builder.$commandindex = self.$commands.push({ type: 'insert', builder: builder, value: value || {}, unique: unique }) - 1;
+	builder.value = value || {};
+	unique && builder.first();
+	builder.$commandindex = self.$commands.push({ type: 'insert', builder: builder, unique: unique }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -357,7 +358,8 @@ DP.update = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'update');
 	builder.table(table);
-	builder.$commandindex = self.$commands.push({ type: 'update', builder: builder, value: value || {}, insert: insert }) - 1;
+	builder.value = value || {};
+	builder.$commandindex = self.$commands.push({ type: 'update', builder: builder, insert: insert }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -367,7 +369,8 @@ DP.modify = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'modify');
 	builder.table(table);
-	builder.$commandindex = self.$commands.push({ type: 'modify', builder: builder, value: value || {}, insert: insert }) - 1;
+	builder.value = value || {};
+	builder.$commandindex = self.$commands.push({ type: 'modify', builder: builder, insert: insert }) - 1;
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -537,8 +540,7 @@ QB.set = QB.upd = function(prop, value) {
 	if (self.$commandindex == null)
 		throw new Error('This QueryBuilder.inc() is supported for INSERT/UPDATE/MODIFY operations.');
 
-	var cmd = self.db.$commands[self.$commandindex];
-	cmd.value[prop] = value;
+	self.model[prop] = value;
 	return self;
 };
 
