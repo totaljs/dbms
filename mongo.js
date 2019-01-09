@@ -106,7 +106,7 @@ function list(client, cmd) {
 	builder.db.$debug && builder.db.$debug({ collection: client.$database + '.' + opt.table, condition: filter.where, options: options });
 
 	var db = client.db(client.$database).collection(opt.table);
-	db.estimatedDocumentCount(filter.where, function(err, count) {
+	db.countDocuments(filter.where, function(err, count) {
 		if (err) {
 			client.close();
 			builder.$callback(err, null);
