@@ -566,6 +566,13 @@ QB.assign = function(prop) {
 	return self;
 };
 
+QB.eq = function() {
+	var model = arguments[arguments.length - 1];
+	for (var i = 0; i < arguments.length - 1; i++)
+		this.where(arguments[i], model[arguments[i]]);
+	return this;
+};
+
 QB.where = function(name, compare, value) {
 
 	if (value === undefined) {
