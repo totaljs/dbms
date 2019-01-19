@@ -131,6 +131,8 @@ function insert(client, cmd) {
 		if (val === undefined)
 			continue;
 
+		var raw = false;
+
 		switch (key[0]) {
 			case '-':
 			case '+':
@@ -138,12 +140,27 @@ function insert(client, cmd) {
 			case '/':
 				key = key.substring(1);
 				break;
+			case '=':
+				key = key.substring(1);
+				raw = true;
+				break;
+			case '!':
+				// toggle
+				key = key.substring(1);
+				if (val)
+					val = true;
+				else
+					val = false;
+				break;
 		}
 
-
 		fields.push(key);
-		values.push('$' + index++);
-		params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.builder.value) : val);
+
+		if (raw) {
+			values.push('$' + index++);
+			params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.builder.value) : val);
+		} else
+			values.push(val);
 	}
 
 	var q = 'INSERT INTO ' + opt.table + ' (' + fields.join(',') + ') VALUES(' + values.join(',') + ')';
@@ -198,6 +215,15 @@ function modify(client, cmd) {
 				key = key.substring(1);
 				type = key + '=COALESCE(' + key + ',0)' + c + '$' + (index++);
 				break;
+			case '!':
+				// toggle
+				key = key.substring(1);
+				type = key + '=NOT ' + key;
+				break;
+			case '=':
+				// raw
+				type = key.substring(1) + '=' + val;
+				break;
 			default:
 				params.push(val);
 				type = key + '=$' + (index++);
@@ -208,7 +234,7 @@ function modify(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true) + ' RETURNING 1) SELECT count(*)::int as dbmsvalue FROM rows';
+	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
@@ -229,7 +255,7 @@ function modify(client, cmd) {
 function remove(client, cmd) {
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true) + ' RETURNING 1) SELECT count(*)::int as dbmsvalue FROM rows';
+	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, function(err, response) {
 		client.$done();
