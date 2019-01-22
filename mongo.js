@@ -420,7 +420,7 @@ function eqgtlt(cmd) {
 	}
 }
 
-function WHERE(builder, scalar, group) {
+function WHERE(builder, scalar) { // , group
 
 	var condition = {};
 	var sort = null;
