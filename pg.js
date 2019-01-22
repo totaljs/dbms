@@ -158,9 +158,10 @@ function insert(client, cmd) {
 
 		if (raw) {
 			values.push(val);
-		} else
+		} else {
 			values.push('$' + index++);
 			params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.builder.value) : val);
+		}
 	}
 
 	var q = 'INSERT INTO ' + opt.table + ' (' + fields.join(',') + ') VALUES(' + values.join(',') + ')';
