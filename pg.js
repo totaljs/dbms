@@ -157,10 +157,10 @@ function insert(client, cmd) {
 		fields.push(key);
 
 		if (raw) {
+			values.push(val);
+		} else
 			values.push('$' + index++);
 			params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.builder.value) : val);
-		} else
-			values.push(val);
 	}
 
 	var q = 'INSERT INTO ' + opt.table + ' (' + fields.join(',') + ') VALUES(' + values.join(',') + ')';
