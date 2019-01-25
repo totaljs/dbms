@@ -46,7 +46,7 @@ function select(client, cmd) {
 			rows = rows.length ? rows[0] : null;
 
 		// checks joins
-		if (builder.$joins) {
+		if (!err && builder.$joins) {
 			client.$dbms._join(rows, builder);
 			setImmediate(builder.db.$next);
 		} else
@@ -113,7 +113,11 @@ function list(client, cmd) {
 		} else {
 			db.find(filter.where, options).toArray(function(err, response) {
 				client.close();
-				builder.$callback(err, response, count);
+				if (!err && builder.$joins) {
+					client.$dbms._joins(response, builder, count || 0);
+					setImmediate(builder.db.$next);
+				} else
+					builder.$callback(err, response, count);
 			});
 		}
 	});

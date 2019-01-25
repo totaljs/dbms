@@ -28,7 +28,7 @@ function select(client, cmd) {
 			rows = rows.length ? rows[0] : null;
 
 		// checks joins
-		if (builder.$joins) {
+		if (!err && builder.$joins) {
 			client.$dbms._joins(rows, builder);
 			setImmediate(builder.db.$next);
 		} else
@@ -80,7 +80,13 @@ function list(client, cmd) {
 			meta = rows.shift();
 		}
 
-		builder.$callback(err, rows, meta ? meta.dbmsvalue || 0 : 0);
+		// checks joins
+		// client.$dbms._joins(rows, builder);
+		if (!err && builder.$joins) {
+			client.$dbms._joins(rows, builder, meta ? meta.dbmsvalue || 0 : 0);
+			setImmediate(builder.db.$next);
+		} else
+			builder.$callback(err, rows, meta ? meta.dbmsvalue || 0 : 0);
 	});
 }
 
@@ -269,15 +275,13 @@ function remove(client, cmd) {
 exports.run = function(opt, self, cmd) {
 	var conn = opt.options.pooling ? createpool(opt) : createclient(opt);
 	conn.connect(function(err, client, done) {
-
-		client.$dbms = self;
-
 		if (err) {
 			if (cmd.builder)
 				cmd.builder.$callback(err);
 			else
 				cmd.db.$next(err);
 		} else {
+			client.$dbms = self;
 			client.$done = done || client.end;
 			switch (cmd.type) {
 				case 'transaction':

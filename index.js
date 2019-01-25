@@ -145,6 +145,11 @@ DP.next = function() {
 			}
 		}
 
+		if (cmd.builder.disabled) {
+			setImmediate(self.$next);
+			return;
+		}
+
 		if (cmd.type === 'task') {
 			cmd.value.call(self, self.$outputall, self.$lastoutput);
 			setImmediate(self.$next);
@@ -1179,7 +1184,7 @@ DP._findItems = function(items, field, value) {
 	return arr;
 };
 
-DP._joins = function(response, builder) {
+DP._joins = function(response, builder, count) {
 
 	// Prepares unique values for joining
 	if (response instanceof Array && response.length) {
@@ -1209,13 +1214,22 @@ DP._joins = function(response, builder) {
 	}
 
 	builder.$joins.dbmswait(function(join, next) {
+
 		var meta = join.$joinmeta;
+		var arr = Array.from(meta.unique);
+
 		meta.can = true;
-		join.in(meta.a, Array.from(meta.unique));
+
+		if (!arr.length) {
+			join.disabled = true;
+			return next();
+		}
+
+		join.in(meta.a, arr);
 		join.callback(function(err, data) {
 
 			if (err) {
-				builder.$callback(err, response);
+				builder.$callback(err, response, count);
 				builder.$joins.length = null;
 				return;
 			}
@@ -1230,5 +1244,9 @@ DP._joins = function(response, builder) {
 
 			next();
 		});
-	}, () => builder.$callback(null, response), 3);
+	// }, () => builder.$callback(null, response, count), 3);
+	}, function() {
+		console.log('DONE');
+		builder.$callback(null, response, count);
+	}, 3);
 };
