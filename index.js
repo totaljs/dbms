@@ -145,7 +145,7 @@ DP.next = function() {
 			}
 		}
 
-		if (cmd.builder.disabled) {
+		if (cmd.builder && cmd.builder.disabled) {
 			setImmediate(self.$next);
 			return;
 		}
