@@ -81,6 +81,18 @@ DP.debug = function() {
 	return this;
 };
 
+DP.invalid = function(name, err) {
+	var self = this;
+	self.$errors.push(name, err);
+	return self;
+};
+
+DP.kill = function() {
+	var self = this;
+	self.$commands.length = 0;
+	return self;
+};
+
 DP.callback = function(fn) {
 	var self = this;
 	self.$callback = fn;
