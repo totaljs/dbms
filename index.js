@@ -87,9 +87,10 @@ DP.invalid = function(name, err) {
 	return self;
 };
 
-DP.kill = function() {
+DP.kill = function(reason) {
 	var self = this;
 	self.$commands.length = 0;
+	reason && self.$errors.push(reason);
 	return self;
 };
 
