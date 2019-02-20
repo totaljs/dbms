@@ -24,7 +24,7 @@ function DBMS(ebuilder) {
 	var self = this;
 	self.$commands = [];
 	self.$output = {};
-	self.$outputall = {};
+	self.response = self.$outputall = {};
 	self.$eb = global.ErrorBuilder != null;
 	self.$errors = ebuilder || (global.ErrorBuilder ? new global.ErrorBuilder() : []);
 
