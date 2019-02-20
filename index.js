@@ -1259,7 +1259,6 @@ DP._joins = function(response, builder, count) {
 		});
 	// }, () => builder.$callback(null, response, count), 3);
 	}, function() {
-		console.log('DONE');
 		builder.$callback(null, response, count);
 	}, 3);
 };
