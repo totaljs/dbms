@@ -39,6 +39,8 @@ function DBMS(ebuilder) {
 
 const DP = DBMS.prototype;
 
+DP.promise = promise;
+
 DP.blob = function(table) {
 
 	if (!table)
