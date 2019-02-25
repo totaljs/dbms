@@ -3,6 +3,7 @@ const MongoClient = MongoDB.MongoClient;
 const EMPTYARRAY = [];
 const INSERTPROJECTION = { projection: { '_id': 1 }};
 const BUCKETNAME = { bucketName: 'db' };
+const BLACKLIST = { dbms: 1 };
 
 global.ObjectID = MongoDB.ObjectID;
 
@@ -158,8 +159,20 @@ function insert(client, cmd) {
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
 		var val = cmd.builder.value[key];
-		if (val === undefined)
+		if (val === undefined || BLACKLIST[key])
 			continue;
+
+		if (cmd.builder.options.fields && cmd.builder.options.fields.length) {
+			var skip = true;
+			for (var j = 0; j < cmd.builder.options.fields.length; j++) {
+				if (cmd.builder.options.fields[j] == key || cmd.builder.options.fields[j] == key.substring(1)) {
+					skip = false;
+					break;
+				}
+			}
+			if (skip)
+				continue;
+		}
 
 		switch (key[0]) {
 			case '-':
@@ -207,8 +220,20 @@ function modify(client, cmd) {
 		var key = keys[i];
 		var val = cmd.builder.value[key];
 
-		if (val === undefined)
+		if (val === undefined || BLACKLIST[key])
 			continue;
+
+		if (cmd.builder.options.fields && cmd.builder.options.fields.length) {
+			var skip = true;
+			for (var j = 0; j < cmd.builder.options.fields.length; j++) {
+				if (cmd.builder.options.fields[j] == key || cmd.builder.options.fields[j] == key.substring(1)) {
+					skip = false;
+					break;
+				}
+			}
+			if (skip)
+				continue;
+		}
 
 		var c = key[0];
 

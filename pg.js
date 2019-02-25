@@ -4,6 +4,7 @@ const POOLS = {};
 const REG_ESCAPE_1 = /'/g;
 const REG_ESCAPE_2 = /\\/g;
 const EMPTYARRAY = [];
+const BLACKLIST = { dbms: 1 };
 
 function createpool(opt) {
 	return POOLS[opt.id] ? POOLS[opt.id] : (POOLS[opt.id] = opt.options.native ? new Database.native.Pool(opt.options) : new Database.Pool(opt.options));
@@ -134,8 +135,20 @@ function insert(client, cmd) {
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
 		var val = cmd.builder.value[key];
-		if (val === undefined)
+		if (val === undefined || BLACKLIST[key])
 			continue;
+
+		if (cmd.builder.options.fields && cmd.builder.options.fields.length) {
+			var skip = true;
+			for (var j = 0; j < cmd.builder.options.fields.length; j++) {
+				if (cmd.builder.options.fields[j] == key || cmd.builder.options.fields[j] == key.substring(1)) {
+					skip = false;
+					break;
+				}
+			}
+			if (skip)
+				continue;
+		}
 
 		var raw = false;
 
@@ -204,8 +217,20 @@ function modify(client, cmd) {
 		var key = keys[i];
 		var val = cmd.builder.value[key];
 
-		if (val === undefined)
+		if (val === undefined || BLACKLIST[key])
 			continue;
+
+		if (cmd.builder.options.fields && cmd.builder.options.fields.length) {
+			var skip = true;
+			for (var j = 0; j < cmd.builder.options.fields.length; j++) {
+				if (cmd.builder.options.fields[j] == key || cmd.builder.options.fields[j] == key.substring(1)) {
+					skip = false;
+					break;
+				}
+			}
+			if (skip)
+				continue;
+		}
 
 		var c = key[0];
 		var type;

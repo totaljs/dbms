@@ -32,7 +32,7 @@ function DBMS(ebuilder) {
 	// self.$lastoutput;
 
 	self.$next = function(err) {
-		err & self.$errors.push(err);
+		err && self.$errors.push(err);
 		self.next();
 	};
 }
@@ -146,6 +146,9 @@ DP.get = function(path) {
 DP.next = function() {
 
 	var self = this;
+	if (self.$skip)
+		return;
+
 	var cmd = self.$commands.shift();
 
 	logger && loggerend(self);
@@ -220,6 +223,7 @@ DP.next = function() {
 			require('./' + conn.db).run(conn, self, cmd);
 		}
 	} else {
+		self.closed = true;
 		var err = self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null;
 		self.$callback && self.$callback(err, self.$output);
 		if (err)
@@ -438,9 +442,26 @@ DP.must = DP.validate = function(err, reverse) {
 
 function QueryBuilder(db, type) {
 	var self = this;
-	self.db = db;
-	self.$commands = [];
-	self.options = { db: 'default', type: type, take: 0, skip: 0, first: false, fields: null, dynamic: false };
+	// cloning
+	if (db instanceof QueryBuilder) {
+		self.db = db.db;
+		self.$ormprimary = db.$ormprimary;
+		self.$ormprimaryremove = db.$ormprimaryremove;
+		self.$commands = db.$commands.slice(0);
+		self.options = clone(db.options);
+	} else {
+		self.db = db;
+		self.$commands = [];
+		self.options = { db: 'default', type: type, take: 0, skip: 0, first: false, fields: null, dynamic: false };
+	}
+}
+
+function clone(obj) {
+	var keys = Object.keys(obj);
+	var o = {};
+	for (var i = 0; i < keys.length; i++)
+		o[keys[i]] = obj[keys[i]];
+	return o;
 }
 
 const QB = QueryBuilder.prototype;
@@ -477,6 +498,19 @@ QB.table = function(table) {
 	return self;
 };
 
+QB.orm = function(primary) {
+	var self = this;
+	self.$orm = 1;
+	self.$ormprimary = primary || '';
+
+	if (primary && self.options.fields && self.options.fields.indexOf(primary) === -1) {
+		self.options.fields.push(primary);
+		self.$ormprimaryremove = 1;
+	}
+
+	return self;
+};
+
 QB.$callback = function(err, value, count) {
 
 	var self = this;
@@ -494,10 +528,22 @@ QB.$callback = function(err, value, count) {
 		value.pages = Math.ceil(count / value.limit);
 	}
 
+	if (value && self.$orm) {
+		self.$orm = 2;
+		if (value instanceof Array) {
+			for (var i = 0; i < value.length; i++) {
+				value[i].dbms = new QueryBuilder(self);
+				value[i].dbms.value = value[i];
+			}
+		} else {
+			value.dbms = new QueryBuilder(self);
+			value.dbms.value = value;
+		}
+	}
+
 	opt.callback && opt.callback(err, value, count);
 
 	if (err) {
-
 		self.db.$errors.push(err);
 		self.db.$lastoutput = null;
 		self.db.$outputall[opt.table] = null;
@@ -506,6 +552,7 @@ QB.$callback = function(err, value, count) {
 	} else {
 
 		self.db.$outputall[opt.table] = self.db.$lastoutput = value;
+
 		if (opt.assign)
 			self.db.$outputall[opt.assign] = self.db.$output[opt.assign] = value;
 		else
@@ -530,7 +577,11 @@ QB.$callback = function(err, value, count) {
 			opt.callbackno && opt.callbackno(opt.validate);
 	}
 
-	setImmediate(self.db.$next);
+	if (self.$orm)
+		opt.callbackok = opt.callbackno = opt.callback = undefined;
+
+	self.db.$op && clearImmediate(self.db.$op);
+	self.db.$op = setImmediate(self.db.$next);
 };
 
 QB.make = function(fn) {
@@ -807,11 +858,15 @@ QB.or = function(fn) {
 };
 
 QB.fields = function() {
+
 	var self = this;
+
 	if (!self.options.fields)
 		self.options.fields = [];
+
 	for (var i = 0; i < arguments.length; i++)
 		self.options.fields.push(arguments[i]);
+
 	return self;
 };
 
@@ -898,6 +953,95 @@ QB.minute = function(name, compare, value) {
 QB.query = function(value) {
 	var self = this;
 	self.$commands.push({ type: 'code', value: value });
+	return self;
+};
+
+QB.wait = function() {
+	var self = this;
+	self.db.$skip = true;
+	self.db.$op && clearImmediate(self.db.$op);
+	return self;
+};
+
+QB.remove = function(callback) {
+	var self = this;
+	var isnew = false;
+
+	if (!self.db || self.db.closed) {
+		isnew = true;
+		self.db = new DBMS();
+	}
+
+	self.$orm = 0;
+
+	if (self.$ormprimary) {
+		self.where(self.$ormprimary, self.value[self.$ormprimary] || null);
+		if (self.$ormprimaryremove)
+			self.value[self.$ormprimary] = undefined;
+	}
+
+	if (self.options.callbackok)
+		self.options.callbackok = null;
+
+	if (self.options.callbackno)
+		self.options.callbackno = null;
+
+	self.options.callback = callback ? callback : null;
+	self.db.$commands.push({ type: 'remove', builder: self });
+
+	// "next" command is performend when the DBMS instance is new
+
+	if (self.db.$skip || isnew) {
+		self.db.$skip = false;
+		self.db.$op && clearImmediate(self.db.$op);
+		self.db.$op = setImmediate(self.db.$next);
+	}
+
+	return self;
+};
+
+QB.continue = function() {
+	var self = this;
+	self.db.$skip = false;
+	self.db.$op && clearImmediate(self.db.$op);
+	self.db.$op = setImmediate(self.db.$next);
+	return self;
+};
+
+QB.save = function(callback) {
+	var self = this;
+	var isnew = false;
+
+	if (!self.db || self.db.closed) {
+		isnew = true;
+		self.db = new DBMS();
+	}
+
+	self.$orm = 0;
+	self.db.$commandindex = self.db.$commands.push({ type: 'modify', builder: self }) - 1;
+	self.options.fields = null;
+
+	if (self.options.callbackok)
+		self.options.callbackok = null;
+
+	if (self.options.callbackno)
+		self.options.callbackno = null;
+
+	if (self.$ormprimary) {
+		self.where(self.$ormprimary, self.value[self.$ormprimary] || null);
+		if (self.$ormprimaryremove)
+			self.value[self.$ormprimary] = undefined;
+	}
+
+	self.options.callback = callback ? callback : null;
+
+	// "next" command is performend when the DBMS instance is new
+	if (self.db.$skip || isnew) {
+		self.db.$skip = false;
+		self.db.$op && clearImmediate(self.db.$op);
+		self.db.$op = setImmediate(self.db.$next);
+	}
+
 	return self;
 };
 
