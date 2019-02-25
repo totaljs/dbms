@@ -1023,6 +1023,12 @@ QB.copy = function(val) {
 	return self;
 };
 
+QB.replace = function(val) {
+	var self = this;
+	self.value = val;
+	return self;
+};
+
 // ORM
 QB.save = function(callback) {
 	var self = this;
