@@ -956,6 +956,7 @@ QB.query = function(value) {
 	return self;
 };
 
+// ORM
 QB.wait = function() {
 	var self = this;
 	self.db.$skip = true;
@@ -963,6 +964,7 @@ QB.wait = function() {
 	return self;
 };
 
+// ORM
 QB.remove = function(callback) {
 	var self = this;
 	var isnew = false;
@@ -1000,6 +1002,7 @@ QB.remove = function(callback) {
 	return self;
 };
 
+// ORM
 QB.continue = function() {
 	var self = this;
 	self.db.$skip = false;
@@ -1008,6 +1011,19 @@ QB.continue = function() {
 	return self;
 };
 
+// ORM
+QB.copy = function(val) {
+	var self = this;
+	var keys = Object.keys(val);
+	for (var i = 0; i < keys.length; i++) {
+		var key = keys[i];
+		if (key !== 'dbms')
+			self.value[key] = val[key];
+	}
+	return self;
+};
+
+// ORM
 QB.save = function(callback) {
 	var self = this;
 	var isnew = false;
