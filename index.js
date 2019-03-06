@@ -470,9 +470,9 @@ const NOOP = function(){};
 
 QB.promise = promise;
 
-QB.use = function(name) {
+QB.use = function(name, arg) {
 	if (TEMPLATES[name])
-		TEMPLATES[name](this);
+		TEMPLATES[name](this, arg);
 	return this;
 };
 
