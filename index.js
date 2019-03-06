@@ -5,6 +5,7 @@ const CONN = {};
 const CACHE = {};
 const COMPARE = { '<': '<', '>': '>', '>=': '>=', '=>': '>=', '=<': '<=', '<=': '<=', '==': '=', '===': '=', '!=': '!=', '<>': '!=', '=': '=' };
 const MODIFY = { insert: 1, update: 1, modify: 1 };
+const TEMPLATES = {};
 
 function promise(fn) {
 	var self = this;
@@ -469,6 +470,12 @@ const NOOP = function(){};
 
 QB.promise = promise;
 
+QB.use = function(name) {
+	if (TEMPLATES[name])
+		TEMPLATES[name](this);
+	return this;
+};
+
 QB.get = function(path) {
 	return this.db.get(path);
 };
@@ -857,15 +864,20 @@ QB.or = function(fn) {
 	return self;
 };
 
-QB.fields = function() {
+QB.fields = function(fields) {
 
 	var self = this;
 
 	if (!self.options.fields)
 		self.options.fields = [];
 
-	for (var i = 0; i < arguments.length; i++)
-		self.options.fields.push(arguments[i]);
+	var arr = arguments;
+
+	if (arr.length === 1 && fields.indexOf(',') !== -1)
+		arr = fields.split(',');
+
+	for (var i = 0; i < arr.length; i++)
+		self.options.fields.push(arr[i][0] === ' ' ? arr[i].trim() : arr[i]);
 
 	return self;
 };
@@ -1141,6 +1153,10 @@ global.DBMS.logger = function(fn) {
 		logger = console.log;
 	else
 		logger = fn;
+};
+
+global.DBMS.template = function(name, fn) {
+	TEMPLATES[name] = fn;
 };
 
 // Total.js framework
