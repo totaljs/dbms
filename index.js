@@ -1087,7 +1087,7 @@ exports.make = function(fn) {
 	return self;
 };
 
-exports.init = function(name, connection) {
+exports.init = function(name, connection, onerror) {
 
 	if (connection == null || typeof(connection) === 'function') {
 		connection = name;
@@ -1127,14 +1127,13 @@ exports.init = function(name, connection) {
 			tmp.idleTimeoutMillis = +(q.timeout || '1000');
 			tmp.native = native;
 			tmp.pooling = pooling;
+			tmp.onerror = onerror;
 			CONN[name] = { id: name, db: 'pg', options: tmp };
 			break;
 		case 'mongodb:':
 		case 'mongo:':
 			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database };
 			break;
-
-
 	}
 
 	return exports;

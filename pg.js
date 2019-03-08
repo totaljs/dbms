@@ -24,6 +24,8 @@ function select(client, cmd) {
 	client.query(q, function(err, response) {
 
 		client.$done();
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
+
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (opt.first)
 			rows = rows.length ? rows[0] : null;
@@ -44,6 +46,7 @@ function query(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, cmd.value, function(err, response) {
 		client.$done();
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (opt.first)
 			rows = rows.length ? rows[0] : null;
@@ -55,6 +58,7 @@ function command(client, sql, cmd) {
 	cmd.db.$debug && cmd.db.$debug(sql);
 	client.query(sql, function(err) {
 		client.$done();
+		err && client.$opt.onerror && client.$opt.onerror(err, sql);
 		cmd.db.$next(err);
 	});
 }
@@ -70,6 +74,7 @@ function list(client, cmd) {
 	client.query(q, function(err, response) {
 
 		client.$done();
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
 		var rows, meta;
 
@@ -114,7 +119,10 @@ function scalar(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 
 	client.query(q, function(err, response) {
+
 		client.$done();
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
+
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		if (cmd.scalar !== 'group')
 			rows = rows.length ? (rows[0].dbmsvalue || 0) : 0;
@@ -188,6 +196,7 @@ function insert(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err) {
 		client.$done();
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		builder.$callback(err, err == null ? 1 : 0);
 	});
 }
@@ -198,6 +207,7 @@ function insertexists(client, cmd) {
 	var q = 'SELECT 1 as dbmsvalue FROM ' + opt.table + WHERE(builder);
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, function(err, response) {
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (rows.length)
 			builder.$callback(err, 0);
@@ -270,6 +280,7 @@ function modify(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		rows = rows.length ? rows[0].dbmsvalue : 0;
 		if (!rows && cmd.insert) {
@@ -291,6 +302,7 @@ function remove(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, function(err, response) {
 		client.$done();
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		rows = rows.length ? rows[0].dbmsvalue : 0;
 		builder.$callback(err, rows);
@@ -301,11 +313,13 @@ exports.run = function(opt, self, cmd) {
 	var conn = opt.options.pooling ? createpool(opt) : createclient(opt);
 	conn.connect(function(err, client, done) {
 		if (err) {
+			opt.onerror && client.$opt.onerror(err);
 			if (cmd.builder)
 				cmd.builder.$callback(err);
 			else
 				cmd.db.$next(err);
 		} else {
+			client.$opt = opt;
 			client.$dbms = self;
 			client.$done = done || client.end;
 			switch (cmd.type) {

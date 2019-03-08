@@ -41,6 +41,7 @@ function select(client, cmd) {
 	client.db(client.$database).collection(opt.table).find(filter.where, options).toArray(function(err, response) {
 
 		client.close();
+		err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 
 		var rows = response ? response : EMPTYARRAY;
 		if (opt.first)
@@ -80,6 +81,7 @@ function query(client, cmd) {
 		if (opt.first && response instanceof Array)
 			response = response[0];
 		client.close();
+		err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 		builder.$callback(err, response);
 	}, filter.where, options);
 }
@@ -110,6 +112,7 @@ function list(client, cmd) {
 	db.countDocuments(filter.where, function(err, count) {
 		if (err) {
 			client.close();
+			err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 			builder.$callback(err, null);
 		} else {
 			db.find(filter.where, options).toArray(function(err, response) {
@@ -135,6 +138,7 @@ function scalar(client, cmd) {
 	switch (cmd.scalar) {
 		case 'count':
 			client.db(client.$database).collection(opt.table).estimatedDocumentCount(filter.where, function(err, count) {
+				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 				client.close();
 				builder.$callback(err, count);
 			});
@@ -190,6 +194,7 @@ function insert(client, cmd) {
 
 	client.db(client.$database).collection(opt.table).insertOne(params, function(err, response) {
 		client.close();
+		err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 		builder.$callback(err, response && response.result && response.result.n ? 1 : 0);
 	});
 }
@@ -204,6 +209,7 @@ function insertexists(client, cmd) {
 	client.db(client.$database).collection(opt.table).findOne(filter.where, INSERTPROJECTION, function(err, response) {
 		if (err || response) {
 			client.close();
+			err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 			builder.$callback(err, 0);
 		} else
 			insert(client, cmd);
@@ -268,6 +274,7 @@ function modify(client, cmd) {
 
 	var col = client.db(client.$database).collection(opt.table);
 	var callback = function(err, response) {
+		err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 		var count = response && response.result ? response.result.n : 0;
 		if (!count && cmd.insert) {
 			if (cmd.insert !== true)
@@ -297,6 +304,7 @@ function remove(client, cmd) {
 	var col = client.db(client.$database).collection(opt.table);
 	var callback = function(err, response) {
 		client.close();
+		err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 		builder.$callback(err, response && response.result ? response.result.n : 0);
 	};
 
@@ -310,10 +318,12 @@ exports.run = function(opt, self, cmd) {
 	var client = new MongoClient(opt.options, { useNewUrlParser: true });
 	client.connect(function(err) {
 
+		client.$opt = opt;
 		client.$dbms = self;
 		client.$database = opt.database;
 
 		if (err) {
+			opt.onerror && client.$opt.onerror(err);
 			if (cmd.builder)
 				cmd.builder.$callback(err);
 			else
