@@ -223,6 +223,9 @@ DP.next = function() {
 			logger && loggerbeg(self, cmd);
 			require('./' + conn.db).run(conn, self, cmd);
 		}
+
+		self.prev = cmd;
+
 	} else {
 		self.closed = true;
 		var err = self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null;
@@ -232,6 +235,7 @@ DP.next = function() {
 		else
 			self.$callbackok && self.$callbackok(self.$output);
 	}
+
 	return self;
 };
 
@@ -469,6 +473,21 @@ const QB = QueryBuilder.prototype;
 const NOOP = function(){};
 
 QB.promise = promise;
+
+QB.prevfilter = function() {
+	var self = this;
+	var commands = self.db.prev && self.db.prev.builder && self.db.prev.builder.$commands || EMPTYARRAY;
+	for (var i = 0; i < commands.length; i++)
+		self.$commands.push(commands[i]);
+	return self;
+};
+
+QB.prevfields = function() {
+	var self = this;
+	if (self.db.prev && self.db.prev.builder)
+		self.options.fields = self.db.prev && self.db.prev.builder.options.fields;
+	return self;
+};
 
 QB.use = function(name, arg) {
 	if (TEMPLATES[name])
@@ -1127,12 +1146,11 @@ exports.init = function(name, connection, onerror) {
 			tmp.idleTimeoutMillis = +(q.timeout || '1000');
 			tmp.native = native;
 			tmp.pooling = pooling;
-			tmp.onerror = onerror;
-			CONN[name] = { id: name, db: 'pg', options: tmp };
+			CONN[name] = { id: name, db: 'pg', options: tmp, onerror: onerror };
 			break;
 		case 'mongodb:':
 		case 'mongo:':
-			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database };
+			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database, onerror: onerror };
 			break;
 	}
 
