@@ -156,7 +156,7 @@ DP.next = function() {
 
 	if (cmd) {
 
-		if (self.prev && self.prev.builder) {
+		if (cmd.builder && self.prev && self.prev.builder) {
 			if (cmd.builder.$prevfilter) {
 				for (var i = 0; i < self.prev.builder.$commands.length; i++)
 					cmd.builder.$commands.push(self.prev.builder.$commands[i]);
