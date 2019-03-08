@@ -156,6 +156,15 @@ DP.next = function() {
 
 	if (cmd) {
 
+		if (self.prev && self.prev.builder) {
+			if (cmd.builder.$prevfilter) {
+				for (var i = 0; i < self.prev.builder.$commands.length; i++)
+					cmd.builder.$commands.push(self.prev.builder.$commands[i]);
+			}
+			if (cmd.builder.$prevfields && self.prev.builder.options.fields)
+				cmd.builder.options.fields = self.prev.builder.options.fields;
+		}
+
 		if (cmd.builder && cmd.builder.$joinmeta) {
 			if (!cmd.builder.$joinmeta.can) {
 				self.$commands.push(cmd);
@@ -476,16 +485,13 @@ QB.promise = promise;
 
 QB.prevfilter = function() {
 	var self = this;
-	var commands = self.db.prev && self.db.prev.builder && self.db.prev.builder.$commands || EMPTYARRAY;
-	for (var i = 0; i < commands.length; i++)
-		self.$commands.push(commands[i]);
+	self.$prevfilter = 1;
 	return self;
 };
 
 QB.prevfields = function() {
 	var self = this;
-	if (self.db.prev && self.db.prev.builder)
-		self.options.fields = self.db.prev && self.db.prev.builder.options.fields;
+	self.$prevfields = 1;
 	return self;
 };
 
