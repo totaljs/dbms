@@ -313,7 +313,7 @@ exports.run = function(opt, self, cmd) {
 	var conn = opt.options.pooling ? createpool(opt) : createclient(opt);
 	conn.connect(function(err, client, done) {
 		if (err) {
-			opt.onerror && client.$opt.onerror(err);
+			opt.onerror && opt.onerror(err);
 			if (cmd.builder)
 				cmd.builder.$callback(err);
 			else
