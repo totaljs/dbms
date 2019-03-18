@@ -23,7 +23,6 @@ function select(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, function(err, response) {
 
-		client.$done();
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
 		var rows = response ? response.rows : EMPTYARRAY;
@@ -45,7 +44,6 @@ function query(client, cmd) {
 	var q = cmd.query + WHERE(builder);
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, cmd.value, function(err, response) {
-		client.$done();
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (opt.first)
@@ -57,7 +55,6 @@ function query(client, cmd) {
 function command(client, sql, cmd) {
 	cmd.db.$debug && cmd.db.$debug(sql);
 	client.query(sql, function(err) {
-		client.$done();
 		err && client.$opt.onerror && client.$opt.onerror(err, sql);
 		cmd.db.$next(err);
 	});
@@ -73,7 +70,6 @@ function list(client, cmd) {
 
 	client.query(q, function(err, response) {
 
-		client.$done();
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
 		var rows, meta;
@@ -120,7 +116,6 @@ function scalar(client, cmd) {
 
 	client.query(q, function(err, response) {
 
-		client.$done();
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
@@ -195,7 +190,6 @@ function insert(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err) {
-		client.$done();
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		builder.$callback(err, err == null ? 1 : 0);
 	});
@@ -288,10 +282,8 @@ function modify(client, cmd) {
 				cmd.builder.value = cmd.insert;
 			cmd.builder.options.insert && cmd.builder.options.insert(cmd.builder.value);
 			insert(client, cmd);
-		} else {
-			client.$done();
+		} else
 			builder.$callback(err, rows);
-		}
 	});
 }
 
@@ -301,7 +293,6 @@ function remove(client, cmd) {
 	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, function(err, response) {
-		client.$done();
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		rows = rows.length ? rows[0].dbmsvalue : 0;
@@ -309,9 +300,69 @@ function remove(client, cmd) {
 	});
 }
 
+function destroy(conn) {
+	conn.client.$done();
+}
+
+function clientcommand(cmd, client, self) {
+	switch (cmd.type) {
+		case 'transaction':
+			command(client, 'BEGIN', cmd);
+			break;
+		case 'end':
+			cmd.type = self.$eb ? self.$errors.items.length ? 'ROLLBACK' : self.$errors.length ? 'ROLLBACK' : 'COMMIT' : 'COMMIT';
+			command(client, cmd.type, cmd);
+			break;
+		case 'commit':
+		case 'rollback':
+			command(client, cmd.type.toUpperCase(), cmd);
+			break;
+		case 'find':
+		case 'read':
+			select(client, cmd);
+			break;
+		case 'list':
+			list(client, cmd);
+			break;
+		case 'scalar':
+			scalar(client, cmd);
+			break;
+		case 'insert':
+			if (cmd.unique)
+				insertexists(client, cmd);
+			else
+				insert(client, cmd);
+			break;
+		case 'update':
+		case 'modify':
+			modify(client, cmd);
+			break;
+		case 'remove':
+			remove(client, cmd);
+			break;
+		case 'query':
+			query(client, cmd);
+			break;
+		default:
+			cmd.builder.$callback(new Error('Operation "' + cmd.type + '" not found'));
+			break;
+	}
+}
+
 exports.run = function(opt, self, cmd) {
-	var conn = opt.options.pooling ? createpool(opt) : createclient(opt);
-	conn.connect(function(err, client, done) {
+
+	var conn = self.$conn[opt.id];
+	if (!conn) {
+		conn = self.$conn[opt.id] = { driver: opt.options.pooling ? createpool(opt) : createclient(opt) };
+		conn.$$destroy = destroy;
+	}
+
+	if (conn.client) {
+		clientcommand(cmd, conn.client, self);
+		return;
+	}
+
+	conn.driver.connect(function(err, client, done) {
 		if (err) {
 			opt.onerror && opt.onerror(err);
 			if (cmd.builder)
@@ -319,52 +370,11 @@ exports.run = function(opt, self, cmd) {
 			else
 				cmd.db.$next(err);
 		} else {
+			conn.client = client;
 			client.$opt = opt;
 			client.$dbms = self;
 			client.$done = done || client.end;
-			switch (cmd.type) {
-				case 'transaction':
-					command(client, 'BEGIN', cmd);
-					break;
-				case 'end':
-					cmd.type = self.$eb ? self.$errors.items.length ? 'ROLLBACK' : self.$errors.length ? 'ROLLBACK' : 'COMMIT' : 'COMMIT';
-					command(client, cmd.type, cmd);
-					break;
-				case 'commit':
-				case 'rollback':
-					command(client, cmd.type.toUpperCase(), cmd);
-					break;
-				case 'find':
-				case 'read':
-					select(client, cmd);
-					break;
-				case 'list':
-					list(client, cmd);
-					break;
-				case 'scalar':
-					scalar(client, cmd);
-					break;
-				case 'insert':
-					if (cmd.unique)
-						insertexists(client, cmd);
-					else
-						insert(client, cmd);
-					break;
-				case 'update':
-				case 'modify':
-					modify(client, cmd);
-					break;
-				case 'remove':
-					remove(client, cmd);
-					break;
-				case 'query':
-					query(client, cmd);
-					break;
-				default:
-					cmd.builder.$callback(new Error('Operation "' + cmd.type + '" not found'));
-					done();
-					break;
-			}
+			clientcommand(cmd, conn.client, self);
 		}
 	});
 };

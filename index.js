@@ -23,6 +23,7 @@ var logger;
 
 function DBMS(ebuilder) {
 	var self = this;
+	self.$conn = {};
 	self.$commands = [];
 	self.$output = {};
 	self.response = self.$outputall = {};
@@ -236,6 +237,16 @@ DP.next = function() {
 		self.prev = cmd;
 
 	} else {
+
+		if (self.$conn) {
+			var keys = Object.keys(self.$conn);
+			for (var i = 0; i < keys.length; i++) {
+				var item = self.$conn[keys[i]];
+				item.$$destroy(item);
+				self.$conn[keys[i]] = null;
+			}
+		}
+
 		self.closed = true;
 		var err = self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null;
 		self.$callback && self.$callback(err, self.$output);
