@@ -326,6 +326,10 @@ exports.run = function(opt, self, cmd) {
 				case 'transaction':
 					command(client, 'BEGIN', cmd);
 					break;
+				case 'end':
+					cmd.type = self.$eb ? self.$errors.items.length ? 'ROLLBACK' : self.$errors.length ? 'ROLLBACK' : 'COMMIT' : 'COMMIT';
+					command(client, cmd.type, cmd);
+					break;
 				case 'commit':
 				case 'rollback':
 					command(client, cmd.type.toUpperCase(), cmd);

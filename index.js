@@ -361,6 +361,12 @@ DP.commit = function(conn) {
 	return self;
 };
 
+DP.end = function(conn) {
+	var self = this;
+	self.$commands.push({ type: 'end', db: self, conn: conn || 'default' });
+	return self;
+};
+
 DP.rollback = DP.abort = function(conn) {
 	var self = this;
 	self.$commands.push({ type: 'rollback', db: self, conn: conn || 'default' });
