@@ -457,17 +457,15 @@ DP.modify = function(table, value, insert) {
 
 DP.query = function(conn, query, value) {
 
-	if (query == null) {
+	if (query == null || typeof(query) === 'object') {
+		value = query;
 		query = conn;
 		conn = null;
 	}
 
 	var self = this;
 	var builder = new QueryBuilder(self, 'query');
-
-	if (conn)
-		builder.options.db = conn;
-
+	builder.options.db = conn || 'default';
 	self.$commands.push({ type: 'query', builder: builder, query: query, value: value });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
