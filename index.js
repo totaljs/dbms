@@ -230,8 +230,17 @@ DP.next = function() {
 			if (MODIFY[cmd.type] && cmd.value && typeof(cmd.value.$clean) === 'function')
 				cmd.value = cmd.value.$clean();
 			var conn = CONN[cmd.conn || cmd.builder.options.db];
-			logger && loggerbeg(self, cmd);
-			require('./' + conn.db).run(conn, self, cmd);
+
+			if (conn == null) {
+				var err = new Error('Connection string "' + (cmd.conn || cmd.builder.options.db) + '" is not initialized.');
+				if (cmd.builder)
+					cmd.builder.$callback(err);
+				else
+					cmd.db.$next(err);
+			} else {
+				logger && loggerbeg(self, cmd);
+				require('./' + conn.db).run(conn, self, cmd);
+			}
 		}
 
 		self.prev = cmd;
@@ -446,9 +455,19 @@ DP.modify = function(table, value, insert) {
 	return builder;
 };
 
-DP.query = function(query, value) {
+DP.query = function(conn, query, value) {
+
+	if (query == null) {
+		query = conn;
+		conn = null;
+	}
+
 	var self = this;
 	var builder = new QueryBuilder(self, 'query');
+
+	if (conn)
+		builder.options.db = conn;
+
 	self.$commands.push({ type: 'query', builder: builder, query: query, value: value });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
@@ -544,6 +563,12 @@ QB.table = function(table) {
 	}
 	self.options.db = cache.db;
 	self.options.table = cache.table;
+	return self;
+};
+
+QB.conn = function(name) {
+	var self = this;
+	self.options.db = name;
 	return self;
 };
 
