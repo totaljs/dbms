@@ -615,14 +615,12 @@ QB.$callback = function(err, value, count) {
 		}
 	}
 
-	opt.callback && opt.callback(err, value, count);
-
 	if (err) {
+		opt.callback && opt.callback(err, value, count);
 		self.db.$errors.push(err);
 		self.db.$lastoutput = null;
 		self.db.$outputall[opt.table] = null;
 		opt.callbackno && opt.callbackno(err);
-
 	} else {
 
 		self.db.$outputall[opt.table] = self.db.$lastoutput = value;
@@ -640,10 +638,12 @@ QB.$callback = function(err, value, count) {
 					ok = false;
 				}
 			} else if (!value) {
-				self.$errors.push(opt.validate);
+				self.db.$errors.push(opt.validate);
 				ok = false;
 			}
 		}
+
+		opt.callback && opt.callback(ok ? null : opt.validate, value, count);
 
 		if (ok)
 			opt.callbackok && opt.callbackok(value, count);
