@@ -555,14 +555,14 @@ function WHERE(builder, scalar) { // , group
 			case 'minute':
 				new Error('Not implemented', 'MongoDB doesn\'t support date function for quering.');
 				break;
-			case 'code':
+			case 'query':
 				if (tmp) {
 					filter = {};
-					tmp.push(cmd.value);
+					tmp.push(cmd.query);
 				} else {
-					var arr = Object.keys(cmd.value);
+					var arr = Object.keys(cmd.query);
 					for (var j = 0; j < arr.length; j++)
-						condition[arr[j]] = cmd.value[arr[j]];
+						condition[arr[j]] = cmd.query[arr[j]];
 				}
 				break;
 			case 'or':

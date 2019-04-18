@@ -3,6 +3,7 @@ const Lo = require('./pg-lo');
 const POOLS = {};
 const REG_ESCAPE_1 = /'/g;
 const REG_ESCAPE_2 = /\\/g;
+const REG_PARAMS = /\$(\d)?/g;
 const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
 
@@ -18,10 +19,11 @@ function select(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder);
+	var params = [];
+	var q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder, null, null, params);
 
 	builder.db.$debug && builder.db.$debug(q);
-	client.query(q, function(err, response) {
+	client.query(q, params, function(err, response) {
 
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
@@ -41,7 +43,7 @@ function select(client, cmd) {
 function query(client, cmd) {
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q = cmd.query + WHERE(builder);
+	var q = cmd.query + WHERE(builder, null, null, cmd.value);
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, cmd.value, function(err, response) {
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -64,11 +66,12 @@ function list(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + WHERE(builder, true) + ';SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder);
+	var params = [];
+	var q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + WHERE(builder, true, null, params) + ';SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder, null, null, params);
 
 	builder.db.$debug && builder.db.$debug(q);
 
-	client.query(q, function(err, response) {
+	client.query(q, params, function(err, response) {
 
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
@@ -96,6 +99,7 @@ function scalar(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
+	var params = [];
 	var q;
 
 	switch (cmd.scalar) {
@@ -111,10 +115,10 @@ function scalar(client, cmd) {
 			break;
 	}
 
-	q = q + WHERE(builder, false, cmd.scalar === 'group' ? cmd.name : null);
+	q = q + WHERE(builder, false, cmd.scalar === 'group' ? cmd.name : null, params);
 	builder.db.$debug && builder.db.$debug(q);
 
-	client.query(q, function(err, response) {
+	client.query(q, params, function(err, response) {
 
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
@@ -464,13 +468,13 @@ exports.blob_write = function(opt, stream, name, callback) {
 	});
 };
 
-function WHERE(builder, scalar, group) {
-
+function WHERE(builder, scalar, group, params) {
 	var condition = [];
 	var sort = [];
 	var tmp;
 	var op = 'AND';
 	var opuse = false;
+	var index = -1;
 
 	for (var i = 0; i < builder.$commands.length; i++) {
 		var cmd = builder.$commands[i];
@@ -522,6 +526,16 @@ function WHERE(builder, scalar, group) {
 				opuse && condition.length && condition.push(op);
 				condition.push('LENGTH(' + cmd.name + +'::text)>0');
 				break;
+			case 'query':
+				opuse && condition.length && condition.push(op);
+				index = -1;
+				if (cmd.value) {
+					if (typeof(cmd.value) === 'function')
+						cmd.value = cmd.value();
+					index = params.push(cmd.value);
+				}
+				condition.push('(' + (index === -1 ? cmd.query : cmd.query.replace(REG_PARAMS, '$$' + index)) + ')');
+				break;
 			case 'empty':
 				opuse && condition.length && condition.push(op);
 				condition.push('(' + cmd.name + ' IS NULL OR LENGTH(' + cmd.name + +'::text)=0)');
@@ -533,10 +547,6 @@ function WHERE(builder, scalar, group) {
 			case 'minute':
 				opuse && condition.length && condition.push(op);
 				condition.push('EXTRACT(' + cmd.type + ' from ' + cmd.name + ')' + cmd.compare + ESCAPE(cmd.value));
-				break;
-			case 'code':
-				opuse && condition.length && condition.push(op);
-				condition.push('(' + cmd.value + ')');
 				break;
 			case 'or':
 				opuse && condition.length && condition.push(op);

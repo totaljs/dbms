@@ -22,7 +22,9 @@ function promise(fn) {
 var logger;
 
 function DBMS(ebuilder) {
+
 	var self = this;
+
 	self.$conn = {};
 	self.$commands = [];
 	self.$output = {};
@@ -915,9 +917,9 @@ QB.insert = function(callback) {
 	return self;
 };
 
-QB.query = function(value) {
+QB.query = function(q, value) {
 	var self = this;
-	self.$commands.push({ type: 'query', value: value });
+	self.$commands.push({ type: 'query', query: q, value: value });
 	return self;
 };
 
@@ -1024,12 +1026,6 @@ QB.minute = function(name, compare, value) {
 
 	var self = this;
 	self.$commands.push({ type: 'minute', name: name, value: value, compare: compare });
-	return self;
-};
-
-QB.query = function(value) {
-	var self = this;
-	self.$commands.push({ type: 'code', value: value });
 	return self;
 };
 
