@@ -3,7 +3,7 @@ const Lo = require('./pg-lo');
 const POOLS = {};
 const REG_ESCAPE_1 = /'/g;
 const REG_ESCAPE_2 = /\\/g;
-const REG_PARAMS = /\$(\d)?/g;
+const REG_PARAMS = /\$\d/g;
 const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
 
@@ -475,6 +475,13 @@ function WHERE(builder, scalar, group, params) {
 	var op = 'AND';
 	var opuse = false;
 	var index = -1;
+	var current; // temporary for "query" + "cmd.value" and "replace" method because of performance
+
+	var replace = function(text) {
+		var indexer = (+text.substring(1)) - 1;
+		index = params.push(current[indexer]);
+		return '$' + index;
+	};
 
 	for (var i = 0; i < builder.$commands.length; i++) {
 		var cmd = builder.$commands[i];
@@ -528,13 +535,9 @@ function WHERE(builder, scalar, group, params) {
 				break;
 			case 'query':
 				opuse && condition.length && condition.push(op);
-				index = -1;
-				if (cmd.value) {
-					if (typeof(cmd.value) === 'function')
-						cmd.value = cmd.value();
-					index = params.push(cmd.value);
-				}
-				condition.push('(' + (index === -1 ? cmd.query : cmd.query.replace(REG_PARAMS, '$$' + index)) + ')');
+				if (cmd.value)
+					current = cmd.value;
+				condition.push('(' + (current == undefined ? cmd.query : cmd.query.replace(REG_PARAMS, replace)) + ')');
 				break;
 			case 'empty':
 				opuse && condition.length && condition.push(op);
