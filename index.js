@@ -917,7 +917,7 @@ QB.insert = function(callback) {
 	return self;
 };
 
-QB.query = function(q, value) {
+QB.code = QB.query = function(q, value) {
 	var self = this;
 	self.$commands.push({ type: 'query', query: q, value: value });
 	return self;
