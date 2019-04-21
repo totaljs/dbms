@@ -274,7 +274,7 @@ function modify(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
+	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
@@ -294,9 +294,10 @@ function modify(client, cmd) {
 function remove(client, cmd) {
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
+	var params = [];
+	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
-	client.query(q, function(err, response) {
+	client.query(q, params, function(err, response) {
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		rows = rows.length ? rows[0].dbmsvalue : 0;
