@@ -484,7 +484,7 @@ DP.remove = function(table) {
 	return builder;
 };
 
-DP.must = DP.validate = function(err, reverse) {
+DP.error = DP.must = DP.validate = function(err, reverse) {
 	var self = this;
 	self.$commands.push({ type: 'validate', value: err || 'unhandled exception', reverse: reverse });
 	return self;
