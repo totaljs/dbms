@@ -190,12 +190,12 @@ function insert(client, cmd) {
 		}
 	}
 
-	var q = 'INSERT INTO ' + opt.table + ' (' + fields.join(',') + ') VALUES(' + values.join(',') + ')';
+	var q = 'INSERT INTO ' + opt.table + ' (' + fields.join(',') + ') VALUES(' + values.join(',') + ')' + (builder.$primarykey ? (' RETURNING ' + builder.$primarykey) : '');
 
 	builder.db.$debug && builder.db.$debug(q);
-	client.query(q, params, function(err) {
+	client.query(q, params, function(err, response) {
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
-		builder.$callback(err, err == null ? 1 : 0);
+		builder.$callback(err, err == null ? (response.rows && response.rows.length ? response.rows[0][builder.$primarykey] : 1) : 0);
 	});
 }
 

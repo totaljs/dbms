@@ -497,6 +497,7 @@ function QueryBuilder(db, type) {
 		self.db = db.db;
 		self.$ormprimary = db.$ormprimary;
 		self.$ormprimaryremove = db.$ormprimaryremove;
+		self.$primarykey = db.$primarykey;
 		self.$commands = db.$commands.slice(0);
 		self.options = clone(db.options);
 	} else {
@@ -518,6 +519,11 @@ const QB = QueryBuilder.prototype;
 const NOOP = function(){};
 
 QB.promise = promise;
+
+QB.primarykey = function(key) {
+	this.$primarykey = key;
+	return this;
+};
 
 QB.prevfilter = function() {
 	var self = this;
@@ -576,12 +582,10 @@ QB.orm = function(primary) {
 	var self = this;
 	self.$orm = 1;
 	self.$ormprimary = primary || '';
-
 	if (primary && self.options.fields && self.options.fields.indexOf(primary) === -1) {
 		self.options.fields.push(primary);
 		self.$ormprimaryremove = 1;
 	}
-
 	return self;
 };
 
@@ -852,6 +856,11 @@ QB.callback = function(callback) {
 
 	self.options.callback = callback;
 	return self;
+};
+
+QB.debug = function() {
+	this.db.$debug = debug;
+	return this;
 };
 
 QB.data = function(fn) {
