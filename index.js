@@ -941,6 +941,7 @@ QB.insert = function(callback) {
 
 QB.code = QB.query = function(q, value) {
 	var self = this;
+	self.options.params = !!value;
 	self.$commands.push({ type: 'query', query: q, value: value });
 	return self;
 };

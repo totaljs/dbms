@@ -67,31 +67,34 @@ function list(client, cmd) {
 	var builder = cmd.builder;
 	var opt = builder.options;
 	var params = [];
-	var q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + WHERE(builder, true, null, params) + ';SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder, null, null, params);
+	var query =  WHERE(builder, true, null, params);
+	var q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + query;
 
 	builder.db.$debug && builder.db.$debug(q);
-
 	client.query(q, params, function(err, response) {
 
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
-		var rows, meta;
+		var count = response.rows && response.rows.length ? response.rows[0].dbmsvalue : 0;
+		var fn = function(err, response) {
 
-		if (response instanceof Array) {
-			rows = response[1] ? (response[1].rows || EMPTYARRAY) : EMPTYARRAY;
-			meta = response[0] ? response[0].rows[0] : null;
-		} else {
-			rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
-			meta = rows.shift();
-		}
+			var rows = response ? response.rows : [];
 
-		// checks joins
-		// client.$dbms._joins(rows, builder);
-		if (!err && builder.$joins) {
-			client.$dbms._joins(rows, builder, meta ? meta.dbmsvalue || 0 : 0);
-			setImmediate(builder.db.$next);
+			// checks joins
+			// client.$dbms._joins(rows, builder);
+			if (!err && builder.$joins) {
+				client.$dbms._joins(rows, builder, count);
+				setImmediate(builder.db.$next);
+			} else
+				builder.$callback(err, rows, count);
+		};
+
+		if (count) {
+			q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
+			builder.db.$debug && builder.db.$debug(q);
+			client.query(q, params, fn);
 		} else
-			builder.$callback(err, rows, meta ? meta.dbmsvalue || 0 : 0);
+			fn(null, null);
 	});
 }
 
@@ -478,11 +481,11 @@ function WHERE(builder, scalar, group, params) {
 	var index = -1;
 	var current; // temporary for "query" + "cmd.value" and "replace" method because of performance
 
-	var replace = function(text) {
+	var replace = builder.options.params ? function(text) {
 		var indexer = (+text.substring(1)) - 1;
 		index = params.push(current[indexer]);
 		return '$' + index;
-	};
+	} : null;
 
 	for (var i = 0; i < builder.$commands.length; i++) {
 		var cmd = builder.$commands[i];
@@ -585,7 +588,9 @@ function WHERE(builder, scalar, group, params) {
 
 	var query = (condition.length ? (' WHERE ' + condition.join(' ')) : '') + (group ? (' GROUP BY ' + group) : '');
 
-	if (!scalar) {
+	if (scalar) {
+		builder.options.sort = sort;
+	} else {
 		if (sort.length)
 			query += ' ORDER BY ' + sort.join(',');
 		if (builder.options.skip && builder.options.take)
@@ -596,6 +601,20 @@ function WHERE(builder, scalar, group, params) {
 			query += ' OFFSET ' + builder.options.skip;
 	}
 
+	return query;
+}
+
+function OFFSET(builder) {
+	var query = '';
+	var sort = builder.options.sort || EMPTYARRAY;
+	if (sort.length)
+		query += ' ORDER BY ' + sort.join(',');
+	if (builder.options.skip && builder.options.take)
+		query += ' LIMIT ' + builder.options.take + ' OFFSET ' + builder.options.skip;
+	else if (builder.options.take)
+		query += ' LIMIT ' + builder.options.take;
+	else if (builder.options.skip)
+		query += ' OFFSET ' + builder.options.skip;
 	return query;
 }
 
