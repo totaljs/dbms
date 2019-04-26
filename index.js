@@ -636,14 +636,26 @@ QB.$callback = function(err, value, count) {
 
 		var ok = true;
 		if (opt.validate) {
-			if (value instanceof Array) {
-				if (!value.length) {
+			if (opt.validatereverse) {
+				if (value instanceof Array) {
+					if (value.length) {
+						self.db.$errors.push(opt.validate);
+						ok = false;
+					}
+				} else if (value) {
 					self.db.$errors.push(opt.validate);
 					ok = false;
 				}
-			} else if (!value) {
-				self.db.$errors.push(opt.validate);
-				ok = false;
+			} else {
+				if (value instanceof Array) {
+					if (!value.length) {
+						self.db.$errors.push(opt.validate);
+						ok = false;
+					}
+				} else if (!value) {
+					self.db.$errors.push(opt.validate);
+					ok = false;
+				}
 			}
 		}
 
@@ -914,9 +926,10 @@ QB.join = function(field, table) {
 	return builder;
 };
 
-QB.error = QB.must = QB.validate = function(err) {
+QB.error = QB.must = QB.validate = function(err, reverse) {
 	var self = this;
 	self.options.validate = err || 'unhandled exception';
+	self.options.validatereverse = reverse;
 	return self;
 };
 
