@@ -914,7 +914,7 @@ QB.join = function(field, table) {
 	return builder;
 };
 
-QB.must = QB.validate = function(err) {
+QB.error = QB.must = QB.validate = function(err) {
 	var self = this;
 	self.options.validate = err || 'unhandled exception';
 	return self;
