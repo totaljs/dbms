@@ -253,8 +253,10 @@ DP.next = function() {
 			var keys = Object.keys(self.$conn);
 			for (var i = 0; i < keys.length; i++) {
 				var item = self.$conn[keys[i]];
-				item.$$destroy(item);
-				self.$conn[keys[i]] = null;
+				if (item) {
+					item.$$destroy(item);
+					self.$conn[keys[i]] = null;
+				}
 			}
 		}
 
