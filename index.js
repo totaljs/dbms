@@ -331,6 +331,46 @@ DP.read = DP.one = function(table) {
 	return builder;
 };
 
+DP.stream = function(table, limit, callback, done) {
+	var self = this;
+	var builder = new QueryBuilder(self, 'find');
+	builder.table(table);
+	builder.take(limit);
+	builder.skip(0);
+
+	var count = 0;
+	var page = 1;
+
+	var cb = function(err, response) {
+
+		if (response.length === 0) {
+			// done
+			done && done(null, count);
+			return;
+		}
+
+		callback(response, function(stop) {
+
+			if (stop) {
+				done && done(null, count);
+				return;
+			}
+
+			builder.skip(limit * (page++));
+			var db = new DBMS(builder);
+			db.$commands.push({ type: 'find', builder: builder });
+			db.$op && clearImmediate(db.$op);
+			db.$op = setImmediate(db.$next);
+		});
+	};
+
+	builder.callback(cb);
+	self.$commands.push({ type: 'find', builder: builder });
+	self.$op && clearImmediate(self.$op);
+	self.$op = setImmediate(self.$next);
+	return builder;
+};
+
 DP.scalar = function(table, type, name) {
 
 	// type: avg
