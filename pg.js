@@ -7,6 +7,14 @@ const REG_PARAMS = /\$\d/g;
 const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
 
+// @TODO: REMOVE
+//ON('knocknock', function() {
+//	var pool = POOLS.default;
+//	if (pool)
+//		require('fs').appendFile(PATH.logs('dbms.log'), NOW.format('yyyy-MM-dd HH:mm:ss') + (' pool.totalCount: {0}, pool.idleCount: {1}, pool.waitingCount:{2}').format(pool.totalCount, pool.idleCount, pool.waitingCount) + '\n', NOOP);
+//});
+
+
 function createpool(opt) {
 	return POOLS[opt.id] ? POOLS[opt.id] : (POOLS[opt.id] = opt.options.native ? new Database.native.Pool(opt.options) : new Database.Pool(opt.options));
 }
@@ -24,7 +32,6 @@ function select(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
-
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
 		var rows = response ? response.rows : EMPTYARRAY;
@@ -278,7 +285,6 @@ function modify(client, cmd) {
 	var builder = cmd.builder;
 	var opt = builder.options;
 	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
-
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -309,7 +315,11 @@ function remove(client, cmd) {
 }
 
 function destroy(conn) {
-	conn.client.$done();
+	var client = conn.client;
+	if (client.release)
+		client.release();
+	else
+		client.end();
 }
 
 function clientcommand(cmd, client, self) {
@@ -359,7 +369,9 @@ function clientcommand(cmd, client, self) {
 
 exports.run = function(opt, self, cmd) {
 
+
 	var conn = self.$conn[opt.id];
+
 	if (!conn) {
 		conn = self.$conn[opt.id] = { driver: opt.options.pooling ? createpool(opt) : createclient(opt) };
 		conn.$$destroy = destroy;
@@ -370,7 +382,7 @@ exports.run = function(opt, self, cmd) {
 		return;
 	}
 
-	conn.driver.connect(function(err, client, done) {
+	conn.driver.connect(function(err, client) {
 		if (err) {
 			opt.onerror && opt.onerror(err);
 			if (cmd.builder)
@@ -381,7 +393,6 @@ exports.run = function(opt, self, cmd) {
 			conn.client = client;
 			client.$opt = opt;
 			client.$dbms = self;
-			client.$done = done || client.end;
 			clientcommand(cmd, conn.client, self);
 		}
 	});

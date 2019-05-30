@@ -21,16 +21,15 @@ function promise(fn) {
 
 var logger;
 
-function DBMS(ebuilder) {
+function DBMS(errbuilder) {
 
 	var self = this;
-
 	self.$conn = {};
 	self.$commands = [];
 	self.$output = {};
 	self.response = self.$outputall = {};
 	self.$eb = global.ErrorBuilder != null;
-	self.$errors = ebuilder || (global.ErrorBuilder ? new global.ErrorBuilder() : []);
+	self.$errors = errbuilder || (global.ErrorBuilder ? new global.ErrorBuilder() : []);
 
 	// self.$log;
 	// self.$lastoutput;
@@ -229,10 +228,11 @@ DP.next = function() {
 			} else
 				setImmediate(self.$next);
 		} else {
+
 			if (MODIFY[cmd.type] && cmd.value && typeof(cmd.value.$clean) === 'function')
 				cmd.value = cmd.value.$clean();
-			var conn = CONN[cmd.conn || cmd.builder.options.db];
 
+			var conn = CONN[cmd.conn || cmd.builder.options.db];
 			if (conn == null) {
 				var err = new Error('Connection string "' + (cmd.conn || cmd.builder.options.db) + '" is not initialized.');
 				if (cmd.builder)
@@ -357,7 +357,8 @@ DP.stream = function(table, limit, callback, done) {
 			}
 
 			builder.skip(limit * (page++));
-			var db = new DBMS(builder);
+			var db = new DBMS(builder.$errors);
+			builder.db = db;
 			db.$commands.push({ type: 'find', builder: builder });
 			db.$op && clearImmediate(db.$op);
 			db.$op = setImmediate(db.$next);
