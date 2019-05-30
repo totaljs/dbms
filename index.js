@@ -1379,12 +1379,13 @@ QB.gridfilter = function(name, obj, type, key) {
 		var arr = value.split(',');
 
 		if (type === undefined || type === String) {
-			builder.or();
-			for (var i = 0, length = arr.length; i < length; i++) {
-				var item = arr[i].trim();
-				builder.search(key, item);
-			}
-			return builder.end();
+			builder.or(function() {
+				for (var i = 0, length = arr.length; i < length; i++) {
+					var item = arr[i].trim();
+					builder.search(key, item);
+				}
+			});
+			return builder;
 		}
 
 		for (var i = 0, length = arr.length; i < length; i++)
