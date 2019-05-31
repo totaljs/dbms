@@ -7,12 +7,12 @@ const REG_PARAMS = /\$\d/g;
 const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
 
-// @TODO: REMOVE
-// ON('service', function() {
-// 	var pool = POOLS.default;
-// 	if (pool)
-// 		require('fs').appendFile(PATH.logs('dbms.log'), NOW.format('yyyy-MM-dd HH:mm:ss') + (' pool.totalCount: {0}, pool.idleCount: {1}, pool.waitingCount:{2}').format(pool.totalCount, pool.idleCount, pool.waitingCount) + '\n', NOOP);
-// });
+//@TODO: REMOVE
+//ON('service', function() {
+//	var pool = POOLS.default;
+//	if (pool)
+//		require('fs').appendFile(PATH.logs('dbms.log'), NOW.format('yyyy-MM-dd HH:mm:ss') + (' pool.totalCount: {0}, pool.idleCount: {1}, pool.waitingCount:{2}').format(pool.totalCount, pool.idleCount, pool.waitingCount) + '\n', NOOP);
+//});
 
 function createpool(opt) {
 	return POOLS[opt.id] ? POOLS[opt.id] : (POOLS[opt.id] = opt.options.native ? new Database.native.Pool(opt.options) : new Database.Pool(opt.options));
