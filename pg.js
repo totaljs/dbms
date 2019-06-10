@@ -14,6 +14,38 @@ const BLACKLIST = { dbms: 1 };
 //		require('fs').appendFile(PATH.logs('dbms.log'), NOW.format('yyyy-MM-dd HH:mm:ss') + (' pool.totalCount: {0}, pool.idleCount: {1}, pool.waitingCount:{2}').format(pool.totalCount, pool.idleCount, pool.waitingCount) + '\n', NOOP);
 //});
 
+var ESCAPE = global.PG_ESCAPE = function(value) {
+
+	if (value == null)
+		return 'null';
+
+	var type = typeof(value);
+
+	if (type === 'function') {
+		value = value();
+		if (value == null)
+			return 'null';
+		type = typeof(value);
+	}
+
+	if (type === 'boolean')
+		return value === true ? 'true' : 'false';
+
+	if (type === 'number')
+		return value.toString();
+
+	if (type === 'string')
+		return pg_escape(value);
+
+	if (value instanceof Array)
+		return pg_escape(value.join(','));
+
+	if (value instanceof Date)
+		return pg_escape(dateToString(value));
+
+	return pg_escape(value.toString());
+};
+
 function createpool(opt) {
 	return POOLS[opt.id] ? POOLS[opt.id] : (POOLS[opt.id] = opt.options.native ? new Database.native.Pool(opt.options) : new Database.Pool(opt.options));
 }
@@ -638,38 +670,6 @@ function FIELDS(builder) {
 			output += ',' + builder.$joinmeta.a;
 	}
 	return output ? output : '*';
-}
-
-function ESCAPE(value) {
-
-	if (value == null)
-		return 'null';
-
-	var type = typeof(value);
-
-	if (type === 'function') {
-		value = value();
-		if (value == null)
-			return 'null';
-		type = typeof(value);
-	}
-
-	if (type === 'boolean')
-		return value === true ? 'true' : 'false';
-
-	if (type === 'number')
-		return value.toString();
-
-	if (type === 'string')
-		return pg_escape(value);
-
-	if (value instanceof Array)
-		return pg_escape(value.join(','));
-
-	if (value instanceof Date)
-		return pg_escape(dateToString(value));
-
-	return pg_escape(value.toString());
 }
 
 // Author: https://github.com/segmentio/pg-escape
