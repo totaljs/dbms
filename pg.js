@@ -113,7 +113,7 @@ function list(client, cmd) {
 
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
-		var count = response.rows && response.rows.length ? response.rows[0].dbmsvalue : 0;
+		var count = err ? 0 : response.rows && response.rows.length ? response.rows[0].dbmsvalue : 0;
 		var fn = function(err, response) {
 
 			var rows = response ? response.rows : [];
@@ -132,7 +132,7 @@ function list(client, cmd) {
 			builder.db.$debug && builder.db.$debug(q);
 			client.query(q, params, fn);
 		} else
-			fn(null, null);
+			fn(err, null);
 	});
 }
 
