@@ -153,7 +153,6 @@ DP.next = function() {
 		return;
 
 	var cmd = self.$commands.shift();
-
 	logger && loggerend(self);
 
 	if (cmd) {
@@ -225,6 +224,7 @@ DP.next = function() {
 			if (stop) {
 				self.$commands = null;
 				self.$callback && self.$callback(self.$errors, null);
+				self.forcekill();
 			} else
 				setImmediate(self.$next);
 		} else {
@@ -248,19 +248,7 @@ DP.next = function() {
 		self.prev = cmd;
 
 	} else {
-
-		if (self.$conn) {
-			var keys = Object.keys(self.$conn);
-			for (var i = 0; i < keys.length; i++) {
-				var item = self.$conn[keys[i]];
-				if (item) {
-					item.$$destroy(item);
-					self.$conn[keys[i]] = null;
-				}
-			}
-		}
-
-		self.closed = true;
+		self.forcekill();
 		var err = self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null;
 		self.$callback && self.$callback(err, self.$output);
 		if (err)
@@ -270,6 +258,21 @@ DP.next = function() {
 	}
 
 	return self;
+};
+
+DP.forcekill = function() {
+	var self = this;
+	if (self.$conn) {
+		self.closed = true;
+		var keys = Object.keys(self.$conn);
+		for (var i = 0; i < keys.length; i++) {
+			var item = self.$conn[keys[i]];
+			if (item) {
+				item.$$destroy(item);
+				self.$conn[keys[i]] = null;
+			}
+		}
+	}
 };
 
 function loggerbeg(self, cmd) {

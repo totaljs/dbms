@@ -14,6 +14,12 @@ const BLACKLIST = { dbms: 1 };
 //		require('fs').appendFile(PATH.logs('dbms.log'), NOW.format('yyyy-MM-dd HH:mm:ss') + (' pool.totalCount: {0}, pool.idleCount: {1}, pool.waitingCount:{2}').format(pool.totalCount, pool.idleCount, pool.waitingCount) + '\n', NOOP);
 //});
 
+// setInterval(function() {
+// 	var pool = POOLS.default;
+// 	if (pool)
+// 		console.log(NOW.format('yyyy-MM-dd HH:mm:ss') + (' pool.totalCount: {0}, pool.idleCount: {1}, pool.waitingCount: {2}').format(pool.totalCount, pool.idleCount, pool.waitingCount));
+// }, 1000);
+
 var ESCAPE = global.PG_ESCAPE = function(value) {
 
 	if (value == null)
