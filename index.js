@@ -675,9 +675,11 @@ QB.$callback = function(err, value, count) {
 
 		self.db.$outputall[opt.table] = self.db.$lastoutput = value;
 
-		if (opt.assign)
+		if (opt.assign) {
+			if (self.db.$output == null)
+				self.db.$output = {};
 			self.db.$outputall[opt.assign] = self.db.$output[opt.assign] = value;
-		else
+		} else
 			self.db.$output = value;
 
 		var ok = true;
