@@ -1002,6 +1002,20 @@ QB.or = function(fn) {
 	return self;
 };
 
+QB.fields2 = function(name, query) {
+
+	if (query == null) {
+		query = name;
+		name = null;
+	}
+
+	var self = this;
+	if (!self.options.fields2)
+		self.options.fields2 = [];
+	self.options.fields2.push({ name: name, query: query });
+	return self;
+};
+
 QB.fields = function(fields) {
 
 	var self = this;

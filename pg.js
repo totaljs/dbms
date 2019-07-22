@@ -667,15 +667,25 @@ function OFFSET(builder) {
 }
 
 function FIELDS(builder) {
+
 	var output = '';
+	var plus = '';
 	var fields = builder.options.fields;
+
 	if (fields && fields.length) {
 		for (var i = 0; i < fields.length; i++)
 			output += (output ? ',' : '') + fields[i];
 		if (builder.$joinmeta)
 			output += ',' + builder.$joinmeta.a;
 	}
-	return output ? output : '*';
+
+	fields = builder.options.fields2;
+	if (fields && fields.length) {
+		for (var i = 0; i < fields.length; i++)
+			plus += fields[i].name ? ('(' + fields[i].query + ') as ' + fields[i].name) : fields[i].query;
+	}
+
+	return (output ? output : '*') + (plus ? (',' + plus) : '');
 }
 
 // Author: https://github.com/segmentio/pg-escape
