@@ -1502,7 +1502,9 @@ function next_wait(self, onItem, callback, thread, tmp) {
 }
 
 DP._findItem = function(items, field, value) {
-	if (value instanceof Array) {
+	if (items == null)
+		return null;
+	else if (value instanceof Array) {
 		for (var j = 0; j < value.length; j++) {
 			if (items[field] === value[j])
 				return items;
