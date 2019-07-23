@@ -679,7 +679,7 @@ function FIELDS(builder) {
 			output += ',' + builder.$joinmeta.a;
 	}
 
-	fields = builder.options.fields2;
+	fields = builder.options.subquery;
 	if (fields && fields.length) {
 		for (var i = 0; i < fields.length; i++)
 			plus += fields[i].name ? ('(' + fields[i].query + ') as ' + fields[i].name) : fields[i].query;

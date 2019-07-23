@@ -1002,7 +1002,7 @@ QB.or = function(fn) {
 	return self;
 };
 
-QB.fields2 = function(name, query) {
+QB.subquery = function(name, query) {
 
 	if (query == null) {
 		query = name;
@@ -1010,9 +1010,10 @@ QB.fields2 = function(name, query) {
 	}
 
 	var self = this;
-	if (!self.options.fields2)
-		self.options.fields2 = [];
-	self.options.fields2.push({ name: name, query: query });
+	if (!self.options.subquery)
+		self.options.subquery = [];
+
+	self.options.subquery.push({ name: name, query: query });
 	return self;
 };
 
