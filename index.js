@@ -1501,30 +1501,23 @@ function next_wait(self, onItem, callback, thread, tmp) {
 	self.dbmswait(onItem, callback, thread, tmp);
 }
 
-DP._findItem = function(items, field, value) {
-	if (items == null)
-		return null;
-	else if (value instanceof Array) {
-		for (var j = 0; j < value.length; j++) {
-			if (items[field] === value[j])
-				return items;
-		}
-	} else if (items[field] === value)
-		return items;
-};
-
-DP._findItems = function(items, field, value) {
-	var arr = [];
+DP._findItems = function(items, field, value, first) {
+	var arr = first ? null : [];
 	for (var i = 0, length = items.length; i < length; i++) {
 		if (value instanceof Array) {
 			for (var j = 0; j < value.length; j++) {
 				if (items[i][field] === value[j]) {
+					if (first)
+						return items[i];
 					arr.push(items[i]);
 					break;
 				}
 			}
-		} else if (items[i][field] === value)
+		} else if (items[i][field] === value) {
+			if (first)
+				return items[i];
 			arr.push(items[i]);
+		}
 	}
 	return arr;
 };
@@ -1570,10 +1563,14 @@ DP._joins = function(response, builder, count) {
 			return next();
 		}
 
+		var first = join.options.first;
+
+		join.options.first = false;
+		join.options.take = 10000; // max. limit
 		join.in(meta.a, arr);
 		join.callback(function(err, data) {
 
-			if (err) {
+			if (err || !data.length) {
 				builder.$callback(err, response, count);
 				builder.$joins.length = null;
 				return;
@@ -1582,14 +1579,14 @@ DP._joins = function(response, builder, count) {
 			if (response instanceof Array) {
 				for (var i = 0; i < response.length; i++) {
 					var row = response[i];
-					row[meta.field] = join.options.first ? join.db._findItem(data, meta.a, row[meta.b]) : join.db._findItems(data, meta.a, row[meta.b]);
+					row[meta.field] = join.db._findItems(data, meta.a, row[meta.b], first);
 				}
 			} else if (response)
-				response[meta.field] = join.options.first ? join.db._findItem(data, meta.a, response[meta.b]) : join.db._findItems(data, meta.a, response[meta.b]);
+				response[meta.field] = join.db._findItems(data, meta.a, response[meta.b], first);
 
 			next();
 		});
-	// }, () => builder.$callback(null, response, count), 3);
+
 	}, function() {
 		builder.$callback(null, response, count);
 	}, 3);
