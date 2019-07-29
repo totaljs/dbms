@@ -227,7 +227,7 @@ function insert(client, cmd) {
 				break;
 		}
 
-		fields.push(key);
+		fields.push('"' + key + '"');
 
 		if (raw) {
 			values.push(val);
@@ -300,20 +300,20 @@ function modify(client, cmd) {
 			case '/':
 				params.push(val ? val : 0);
 				key = key.substring(1);
-				type = key + '=COALESCE(' + key + ',0)' + c + '$' + (index++);
+				type = '"' + key + '"=COALESCE(' + key + ',0)' + c + '$' + (index++);
 				break;
 			case '!':
 				// toggle
 				key = key.substring(1);
-				type = key + '=NOT ' + key;
+				type = '"' + key + '"=NOT ' + key;
 				break;
 			case '=':
 				// raw
-				type = key.substring(1) + '=' + val;
+				type = '"' + key.substring(1) + '=' + val;
 				break;
 			default:
 				params.push(val);
-				type = key + '=$' + (index++);
+				type = '"' + key + '"=$' + (index++);
 				break;
 		}
 		type && fields.push(type);
@@ -353,10 +353,12 @@ function remove(client, cmd) {
 
 function destroy(conn) {
 	var client = conn.client;
-	if (client.release)
-		client.release();
-	else
-		client.end();
+	if (client) {
+		if (client.release)
+			client.release();
+		else
+			client.end();
+	}
 }
 
 function clientcommand(cmd, client, self) {
