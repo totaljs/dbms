@@ -183,44 +183,52 @@ DP.next = function() {
 			cmd.value.call(self, self.$outputall, self.$lastoutput);
 			setImmediate(self.$next);
 		} else if (cmd.type === 'validate') {
-			var type = typeof(cmd.value);
+
 			var stop = false;
-			switch (type) {
-				case 'function':
-					var val = cmd.value(self.$lastoutput, self.$output);
-					if (typeof(val) === 'string') {
-						stop = true;
-						self.$errors.push(val);
-					}
-					break;
-				case 'string':
-					if (self.$lastoutput instanceof Array) {
-						if (cmd.reverse) {
-							if (self.$lastoutput.length) {
-								self.$errors.push(cmd.value);
-								stop = true;
+
+			if (cmd.value == null) {
+				if (self.$lasterror)
+					stop = true;
+			} else {
+				var type = typeof(cmd.value);
+				switch (type) {
+					case 'function':
+						var val = cmd.value(self.$lastoutput, self.$output);
+						if (typeof(val) === 'string') {
+							stop = true;
+							self.$errors.push(val);
+						}
+						break;
+					case 'string':
+						if (self.$lastoutput instanceof Array) {
+							if (cmd.reverse) {
+								if (self.$lastoutput.length) {
+									self.$errors.push(cmd.value);
+									stop = true;
+								}
+							} else {
+								if (!self.$lastoutput.length) {
+									self.$errors.push(cmd.value);
+									stop = true;
+								}
 							}
 						} else {
-							if (!self.$lastoutput.length) {
-								self.$errors.push(cmd.value);
-								stop = true;
+							if (cmd.reverse) {
+								if (self.$lastoutput) {
+									self.$errors.push(cmd.value);
+									stop = true;
+								}
+							} else {
+								if (!self.$lastoutput) {
+									self.$errors.push(cmd.value);
+									stop = true;
+								}
 							}
 						}
-					} else {
-						if (cmd.reverse) {
-							if (self.$lastoutput) {
-								self.$errors.push(cmd.value);
-								stop = true;
-							}
-						} else {
-							if (!self.$lastoutput) {
-								self.$errors.push(cmd.value);
-								stop = true;
-							}
-						}
-					}
-					break;
+						break;
+				}
 			}
+
 			if (stop) {
 				self.$commands = null;
 				self.$callback && self.$callback(self.$errors, null);
@@ -532,7 +540,7 @@ DP.remove = function(table) {
 
 DP.error = DP.must = DP.validate = function(err, reverse) {
 	var self = this;
-	self.$commands.push({ type: 'validate', value: err || 'unhandled exception', reverse: reverse });
+	self.$commands.push({ type: 'validate', value: err, reverse: reverse });
 	return self;
 };
 
@@ -671,6 +679,7 @@ QB.$callback = function(err, value, count) {
 		self.db.$lastoutput = null;
 		self.db.$outputall[opt.table] = null;
 		opt.callbackno && opt.callbackno(err);
+		self.db.$lasterror = err;
 	} else {
 
 		self.db.$outputall[opt.table] = self.db.$lastoutput = value;
@@ -713,6 +722,7 @@ QB.$callback = function(err, value, count) {
 			opt.callbackok && opt.callbackok(value, count);
 		else
 			opt.callbackno && opt.callbackno(opt.validate);
+
 	}
 
 	if (self.$orm)
