@@ -984,7 +984,7 @@ QB.join = function(field, table) {
 	return builder;
 };
 
-QB.error = QB.must = QB.validate = function(err, reverse) {
+QB.err = QB.error = QB.must = QB.validate = function(err, reverse) {
 	var self = this;
 	self.options.validate = err || 'unhandled exception';
 	self.options.validatereverse = reverse;
