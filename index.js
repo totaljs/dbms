@@ -303,7 +303,7 @@ DP.make = function(fn) {
 	return self;
 };
 
-DP.find = function(table) {
+DP.all = DP.find = function(table) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'find');
 	builder.table(table);
@@ -462,7 +462,7 @@ DP.save = function(table, isUpdate, obj, fn) {
 	return builder;
 };
 
-DP.insert = function(table, value, unique) {
+DP.add = DP.insert = function(table, value, unique) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'insert');
 	builder.table(table);
@@ -479,7 +479,7 @@ DP.insert = function(table, value, unique) {
 	return builder;
 };
 
-DP.update = function(table, value, insert) {
+DP.upd = DP.update = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'update');
 	builder.table(table);
@@ -495,7 +495,7 @@ DP.update = function(table, value, insert) {
 	return builder;
 };
 
-DP.modify = function(table, value, insert) {
+DP.mod = DP.modify = function(table, value, insert) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'modify');
 	builder.table(table);
@@ -511,7 +511,7 @@ DP.modify = function(table, value, insert) {
 	return builder;
 };
 
-DP.query = function(conn, query, value) {
+DP.que = DP.query = function(conn, query, value) {
 
 	if (query == null || typeof(query) === 'object') {
 		value = query;
@@ -528,7 +528,7 @@ DP.query = function(conn, query, value) {
 	return builder;
 };
 
-DP.remove = function(table) {
+DP.rem = DP.remove = function(table) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'remove');
 	builder.table(table);
@@ -538,7 +538,7 @@ DP.remove = function(table) {
 	return builder;
 };
 
-DP.error = DP.must = DP.validate = function(err, reverse) {
+DP.err = DP.error = DP.must = DP.validate = function(err, reverse) {
 	var self = this;
 	self.$commands.push({ type: 'validate', value: err, reverse: reverse });
 	return self;
