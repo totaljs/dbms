@@ -296,7 +296,7 @@ function modify(client, cmd) {
 				break;
 			case '=':
 				// raw
-				type = '"' + key.substring(1) + '=' + val;
+				type = '"' + key.substring(1) + '"=' + val;
 				break;
 			default:
 				params.push(val);
