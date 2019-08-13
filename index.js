@@ -1458,7 +1458,7 @@ QB.gridsort = function(sort) {
 	var index = sort.lastIndexOf('_');
 	if (index === -1)
 		index = sort.lastIndexOf(' ');
-	builder.sort(sort.substring(0, index), sort.substring(index + 1) === 'desc');
+	builder.sort(sort.substring(0, index), sort[index + 1] === 'd');
 	return builder;
 };
 
