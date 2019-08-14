@@ -6,6 +6,7 @@ const CACHE = {};
 const COMPARE = { '<': '<', '>': '>', '>=': '>=', '=>': '>=', '=<': '<=', '<=': '<=', '==': '=', '===': '=', '!=': '!=', '<>': '!=', '=': '=' };
 const MODIFY = { insert: 1, update: 1, modify: 1 };
 const TEMPLATES = {};
+const REG_FIELDS_CLEANER = /"|`|\||'|\s/g;
 
 function promise(fn) {
 	var self = this;
@@ -619,10 +620,12 @@ QB.table = function(table) {
 	if (!cache) {
 		var tmp = table.split('/');
 		cache = { db: tmp.length > 1 ? tmp[0] : 'default', table: tmp.length > 1 ? tmp[1] : tmp[0] };
+		cache.type = CONN[cache.db] ? CONN[cache.db].type : '';
 		CACHE[table] = cache;
 	}
 	self.options.db = cache.db;
 	self.options.table = cache.table;
+	self.options.dbname = cache.type;
 	return self;
 };
 
@@ -1284,11 +1287,11 @@ exports.init = function(name, connection, onerror) {
 			tmp.idleTimeoutMillis = +(q.timeout || '1000');
 			tmp.native = native;
 			tmp.pooling = pooling;
-			CONN[name] = { id: name, db: 'pg', options: tmp, onerror: onerror };
+			CONN[name] = { id: name, db: 'pg', options: tmp, onerror: onerror, type: 'pg' };
 			break;
 		case 'mongodb:':
 		case 'mongo:':
-			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database, onerror: onerror };
+			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database, onerror: onerror, type: 'mongodb' };
 			break;
 	}
 
@@ -1368,6 +1371,46 @@ var convert = function(value, type) {
 		return value.trim().parseBoolean();
 
 	return value;
+};
+
+QB.gridfields = function(fields, allowed) {
+
+	var self = this;
+
+	if (typeof(fields) !== 'string') {
+		if (allowed)
+			self.options.fields = allowed.slice(0);
+		return self;
+	}
+
+	fields = fields.replace(REG_FIELDS_CLEANER, '').split(',');
+
+	if (!self.options.fields)
+		self.options.fields = [];
+
+	var count = 0;
+
+	for (var i = 0; i < fields.length; i++) {
+		var field = fields[i];
+		var can = !allowed;
+		if (!can) {
+			for (var j = 0; j < allowed.length; j++) {
+				if (allowed[j] === field) {
+					can = true;
+					break;
+				}
+			}
+		}
+		if (can) {
+			self.options.fields.push(self.options.dbname === 'pg' ? ('"' + fields[i] + '"') : fields[i]);
+			count++;
+		}
+	}
+
+	if (!count)
+		self.options.fields = allowed.slice(0);
+
+	return self;
 };
 
 // Grid filtering
