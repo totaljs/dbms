@@ -8,6 +8,9 @@ const MODIFY = { insert: 1, update: 1, modify: 1 };
 const TEMPLATES = {};
 const REG_FIELDS_CLEANER = /"|`|\||'|\s/g;
 
+// A temporary cache for fields (it's cleaning each 10 minutes)
+var FIELDS = {};
+
 function promise(fn) {
 	var self = this;
 	return new Promise(function(resolve, reject) {
@@ -663,16 +666,34 @@ QB.$callback = function(err, value, count) {
 		value.pages = Math.ceil(count / value.limit);
 	}
 
-	if (value && self.$orm) {
-		self.$orm = 2;
-		if (value instanceof Array) {
-			for (var i = 0; i < value.length; i++) {
-				value[i].dbms = new QueryBuilder(self);
-				value[i].dbms.value = value[i];
+	if (value) {
+		if (self.$orm) {
+			self.$orm = 2;
+			if (value instanceof Array) {
+				for (var i = 0; i < value.length; i++) {
+					if (opt.fieldsrem) {
+						for (var j = 0; j < opt.fieldsrem.length; j++)
+							value[i][opt.fieldsrem[j]] = undefined;
+					}
+					value[i].dbms = new QueryBuilder(self);
+					value[i].dbms.value = value[i];
+				}
+			} else {
+				for (var j = 0; j < opt.fieldsrem.length; j++)
+					value[opt.fieldsrem[j]] = undefined;
+				value.dbms = new QueryBuilder(self);
+				value.dbms.value = value;
 			}
-		} else {
-			value.dbms = new QueryBuilder(self);
-			value.dbms.value = value;
+		} else if (opt.fieldsrem) {
+			if (value instanceof Array) {
+				for (var i = 0; i < value.length; i++) {
+					for (var j = 0; j < opt.fieldsrem.length; j++)
+						value[i][opt.fieldsrem[j]] = undefined;
+				}
+			} else {
+				for (var j = 0; j < opt.fieldsrem.length; j++)
+					value[opt.fieldsrem[j]] = undefined;
+			}
 		}
 	}
 
@@ -1009,9 +1030,15 @@ QB.code = QB.query = function(q, value) {
 
 QB.or = function(fn) {
 	var self = this;
-	self.$commands.push({ type: 'or' });
+	var beg = self.$commands.push({ type: 'or' });
 	fn.call(self, self);
-	self.$commands.push({ type: 'end' });
+	var end = self.$commands.push({ type: 'end' });
+
+	if ((end - beg) === 1) {
+		self.$commands.pop();
+		self.$commands.pop();
+	}
+
 	return self;
 };
 
@@ -1034,16 +1061,32 @@ QB.fields = function(fields) {
 
 	var self = this;
 
+	var arr = arguments;
+	var is = false;
+
+	if (arr.length === 1) {
+
+		if (FIELDS[fields]) {
+			self.options.fields = FIELDS[fields];
+			return self;
+		}
+
+		if (fields.indexOf(',') !== -1) {
+			arr = fields.split(',');
+			is = true;
+		}
+	}
+
 	if (!self.options.fields)
 		self.options.fields = [];
 
-	var arr = arguments;
+	for (var i = 0; i < arr.length; i++) {
+		var field = arr[i][0] === ' ' ? arr[i].trim() : arr[i];
+		self.options.fields.push(field);
+	}
 
-	if (arr.length === 1 && fields.indexOf(',') !== -1)
-		arr = fields.split(',');
-
-	for (var i = 0; i < arr.length; i++)
-		self.options.fields.push(arr[i][0] === ' ' ? arr[i].trim() : arr[i]);
+	if (is)
+		FIELDS[fields] = self.options.fields;
 
 	return self;
 };
@@ -1644,3 +1687,10 @@ DP._joins = function(response, builder, count) {
 		builder.$callback(null, response, count);
 	}, 3);
 };
+
+if (global.ON) {
+	global.ON('service', function(counter) {
+		if (counter % 10 === 0)
+			FIELDS = {};
+	});
+}

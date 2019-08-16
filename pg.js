@@ -6,6 +6,7 @@ const REG_ESCAPE_2 = /\\/g;
 const REG_PARAMS = /\$\d/g;
 const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
+const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1 };
 
 var ESCAPE = global.PG_ESCAPE = function(value) {
 
@@ -182,11 +183,21 @@ function insert(client, cmd) {
 		if (cmd.builder.options.fields && cmd.builder.options.fields.length) {
 			var skip = true;
 			for (var j = 0; j < cmd.builder.options.fields.length; j++) {
-				if (cmd.builder.options.fields[j] == key || cmd.builder.options.fields[j] == key.substring(1)) {
+				var field = cmd.builder.options.fields[j];
+				if (field[0] === '-') {
+					field = field.substring(1);
+					if (field === key || (ISOP[key[0]] && field === key.substring(1))) {
+						skip = true;
+						break;
+					}
+					skip = false;
+				} else if (field === key || (ISOP[key[0]] && field === key.substring(1))) {
 					skip = false;
 					break;
-				}
+				} else
+					skip = false;
 			}
+
 			if (skip)
 				continue;
 		}
@@ -265,11 +276,21 @@ function modify(client, cmd) {
 		if (cmd.builder.options.fields && cmd.builder.options.fields.length) {
 			var skip = true;
 			for (var j = 0; j < cmd.builder.options.fields.length; j++) {
-				if (cmd.builder.options.fields[j] == key || cmd.builder.options.fields[j] == key.substring(1)) {
+				var field = cmd.builder.options.fields[j];
+				if (field[0] === '-') {
+					field = field.substring(1);
+					if (field === key || (ISOP[key[0]] && field === key.substring(1))) {
+						skip = true;
+						break;
+					}
+					skip = false;
+				} else if (field === key || (ISOP[key[0]] && field === key.substring(1))) {
 					skip = false;
 					break;
-				}
+				} else
+					skip = false;
 			}
+
 			if (skip)
 				continue;
 		}
@@ -662,9 +683,18 @@ function FIELDS(builder) {
 	var fields = builder.options.fields;
 
 	if (fields && fields.length) {
-		for (var i = 0; i < fields.length; i++)
-			output += (output ? ',' : '') + fields[i];
-		if (builder.$joinmeta)
+		for (var i = 0; i < fields.length; i++) {
+			var field = fields[i];
+			if (field[0] === '-') {
+				if (builder.options.fieldsrem)
+					builder.options.fieldsrem.push(field.substring(1));
+				else
+					builder.options.fieldsrem = [field.substring(1)];
+				continue;
+			}
+			output += (output ? ',' : '') + field;
+		}
+		if (output && builder.$joinmeta)
 			output += ',' + builder.$joinmeta.a;
 	}
 
