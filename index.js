@@ -886,7 +886,7 @@ QB.skip = function(value) {
 
 QB.limit = function(value) {
 	var self = this;
-	self.options.limit = value;
+	self.options.skip = value;
 	return self;
 };
 
@@ -894,7 +894,7 @@ QB.page = function(page, limit) {
 	var self = this;
 	if (limit)
 		self.options.take = limit;
-	self.options.take = page * self.options.take;
+	self.options.skip = page * self.options.take;
 	return self;
 };
 
