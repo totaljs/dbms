@@ -894,7 +894,7 @@ QB.page = function(page, limit) {
 	var self = this;
 	if (limit)
 		self.options.take = limit;
-	self.options.skip = page * self.options.take;
+	self.options.skip = (page - 1) * self.options.take;
 	return self;
 };
 
@@ -904,7 +904,7 @@ QB.paginate = function(page, limit, maxlimit) {
 	var limit2 = +(limit || 0);
 	var page2 = (+(page || 0)) - 1;
 
-	if (page2 < 0)
+	if (page2 < 0 || !page2)
 		page2 = 0;
 
 	if (maxlimit && limit2 > maxlimit)
