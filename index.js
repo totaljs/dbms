@@ -679,8 +679,10 @@ QB.$callback = function(err, value, count) {
 					value[i].dbms.value = value[i];
 				}
 			} else {
-				for (var j = 0; j < opt.fieldsrem.length; j++)
-					value[opt.fieldsrem[j]] = undefined;
+				if (opt.fieldsrem) {
+					for (var j = 0; j < opt.fieldsrem.length; j++)
+						value[opt.fieldsrem[j]] = undefined;
+				}
 				value.dbms = new QueryBuilder(self);
 				value.dbms.value = value;
 			}
