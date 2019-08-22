@@ -909,7 +909,7 @@ QB.skip = function(value) {
 
 QB.limit = function(value) {
 	var self = this;
-	self.options.skip = value;
+	self.options.take = value;
 	return self;
 };
 
