@@ -527,6 +527,7 @@ DP.que = DP.query = function(conn, query, value) {
 	var builder = new QueryBuilder(self, 'query');
 	builder.options.db = conn || 'default';
 	self.$commands.push({ type: 'query', builder: builder, query: query, value: value });
+	value && (builder.options.params = true);
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -1025,7 +1026,8 @@ QB.insert = function(callback) {
 
 QB.code = QB.query = function(q, value) {
 	var self = this;
-	self.options.params = !!value;
+	if (!self.options.params && !!value)
+		self.options.params = true;
 	self.$commands.push({ type: 'query', query: q, value: value });
 	return self;
 };
