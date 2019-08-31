@@ -1296,7 +1296,13 @@ exports.make = function(fn) {
 
 exports.init = function(name, connection, onerror) {
 
-	if (connection == null || typeof(connection) === 'function') {
+	if (connection == null) {
+		connection = name;
+		name = 'default';
+	}
+
+	if (typeof(connection) === 'function') {
+		onerror = connection;
 		connection = name;
 		name = 'default';
 	}
