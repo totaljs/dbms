@@ -551,7 +551,7 @@ function WHERE(builder, scalar, group, params) {
 			case 'where':
 				tmp = ESCAPE(cmd.value);
 				opuse && condition.length && condition.push(op);
-				condition.push(cmd.name + (cmd.value == null && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
+				condition.push(cmd.name + ((cmd.value == null || tmp == null) && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
 				break;
 			case 'in':
 				opuse && condition.length && condition.push(op);
