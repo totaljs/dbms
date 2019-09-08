@@ -1481,7 +1481,7 @@ QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
 	var key;
 
 	if (skipfilter) {
-		key = 'QBS_' + skipfilter;
+		key = 'QBS' + skipfilter;
 		skipped = CACHE[key];
 		if (!skipped) {
 			var tmp = skipfilter.split(',').trim();
@@ -1493,7 +1493,7 @@ QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
 	}
 
 	if (allowedfields) {
-		key = 'QBF_' + allowedfields;
+		key = 'QBF' + allowedfields;
 		allowed = CACHE[key];
 		if (!allowed) {
 			var tmp = allowedfields.split(',').trim();
