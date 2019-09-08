@@ -1466,6 +1466,127 @@ QB.gridfields = function(fields, allowed) {
 	return self;
 };
 
+QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
+
+	if (typeof(defsort) === 'number') {
+		maxlimit = defsort;
+		defsort = null;
+	}
+
+	var self = this;
+	var query = $.query || $.options;
+	var schema = $.schema;
+	var skipped;
+	var allowed;
+	var key;
+
+	if (skipfilter) {
+		key = 'QBS_' + skipfilter;
+		skipped = CACHE[key];
+		if (!skipped) {
+			var tmp = skipfilter.split(',').trim();
+			var obj = {};
+			for (var i = 0; i < tmp.length; i++)
+				obj[tmp[i]] = 1;
+			skipped = CACHE[key] = obj;
+		}
+	}
+
+	if (allowedfields) {
+		key = 'QBF_' + allowedfields;
+		allowed = CACHE[key];
+		if (!allowed) {
+			var tmp = allowedfields.split(',').trim();
+			var obj = {};
+			var arr = [];
+			for (var i = 0; i < tmp.length; i++) {
+				obj[tmp[i]] = 1;
+				arr.push(tmp[i]);
+			}
+			allowed = CACHE[key] = { keys: arr, meta: obj };
+		}
+	}
+
+	var fields = query.fields;
+	var fieldscount = 0;
+
+	if (!self.options.fields)
+		self.options.fields = [];
+
+	if (fields) {
+		fields = fields.replace(REG_FIELDS_CLEANER, '').split(',');
+		for (var i = 0; i < fields.length; i++) {
+			var field = fields[i];
+			if (allowed) {
+				if (allowed.meta[field]) {
+					self.options.fields.push(self.options.dbname === 'pg' ? ('"' + fields[i] + '"') : fields[i]);
+					fieldscount++;
+				}
+			} else {
+				if (schema.schema[field]) {
+					if (skipped && skipped[field])
+						continue;
+					self.options.fields.push(field);
+					fieldscount++;
+				}
+			}
+		}
+	}
+
+	if (!fieldscount) {
+		if (allowed) {
+			for (var i = 0; i < allowed.keys.length; i++)
+				self.options.fields.push(allowed.keys[i]);
+		} else {
+			for (var i = 0; i < schema.fields.length; i++) {
+				if (skipped && skipped[schema.fields[i]]) {
+					continue;
+				}
+				self.options.fields.push(schema.fields[i]);
+			}
+		}
+	}
+
+	for (var i = 0; i < schema.fields.length; i++) {
+		var name = schema.fields[i];
+		if ((!skipped || !skipped[name]) && query[name]) {
+			var field = schema.schema[name];
+			self.gridfilter(name, query, field.raw);
+		}
+	}
+
+	if (query.sort) {
+		var index = query.sort.lastIndexOf('_');
+		if (index !== -1) {
+			var name = query.sort.substring(0, index);
+			var can = true;
+
+			if (skipped && skipped[name])
+				can = false;
+
+			if (can && allowed && !allowed.meta[name])
+				can = false;
+
+			if (can && !allowed) {
+				if (!schema.schema[name])
+					can = false;
+			}
+
+			if (can)
+				self.sort(name, query.sort[index + 1] === 'd');
+			else if (defsort)
+				self.gridsort(defsort);
+
+		} else if (defsort)
+			self.gridsort(defsort);
+
+	} else if (defsort)
+		self.gridsort(defsort);
+
+	self.paginate(query.page, query.limit, maxlimit || 50);
+	return self;
+};
+
 // Grid filtering
 QB.gridfilter = function(name, obj, type, key) {
 
@@ -1487,7 +1608,7 @@ QB.gridfilter = function(name, obj, type, key) {
 			arr[i] = convert(item, type);
 		}
 
-		if (type === Date) {
+		if (type === Date || type === 'date') {
 			if (typeof(arr[0]) === 'number') {
 				arr[0] = new Date(arr[0], 1, 1, 0, 0, 0);
 				arr[1] = new Date(arr[1], 11, 31, 23, 59, 59);
@@ -1503,27 +1624,47 @@ QB.gridfilter = function(name, obj, type, key) {
 	if (index !== -1) {
 
 		var arr = value.split(',');
-
-		if (type === undefined || type === String) {
-			builder.or(function() {
-				for (var i = 0, length = arr.length; i < length; i++) {
-					var item = arr[i].trim();
-					builder.search(key, item);
-				}
-			});
-			return builder;
-		}
-
 		for (var i = 0, length = arr.length; i < length; i++)
 			arr[i] = convert(arr[i], type);
-
 		return builder.in(key, arr);
+
+		/*
+		builder.or(function() {
+			for (var i = 0, length = arr.length; i < length; i++) {
+				var item = arr[i].trim();
+				var c = item[0];
+				switch (c) {
+					case '=':
+						builder.where(key, item.substring(1));
+						break;
+					case '<':
+						builder.search(key, item.substring(1), 'beg');
+						break;
+					case '>':
+						builder.search(key, item.substring(1), 'end');
+						break;
+					default:
+						builder.search(key, item);
+						break;
+				}
+			}
+		});*/
 	}
 
-	if (type === undefined || type === String)
+	if (type === undefined || type === String || type === 'string') {
+		var c = value[0];
+		switch (c) {
+			case '=':
+				return builder.where(key, value.substring(1));
+			case '<':
+				return builder.search(key, value.substring(1), 'beg');
+			case '>':
+				return builder.search(key, value.substring(1), 'end');
+		}
 		return builder.search(key, value);
+	}
 
-	if (type === Date) {
+	if (type === Date || type === 'date') {
 
 		if (value === 'yesterday')
 			val = NOW.add('-1 day');
@@ -1554,6 +1695,8 @@ QB.gridsort = function(sort) {
 	var index = sort.lastIndexOf('_');
 	if (index === -1)
 		index = sort.lastIndexOf(' ');
+	if (index === -1)
+		index = sort.length;
 	builder.sort(sort.substring(0, index), sort[index + 1] === 'd');
 	return builder;
 };
