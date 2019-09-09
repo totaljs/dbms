@@ -1594,7 +1594,7 @@ QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
 	} else if (defsort)
 		self.gridsort(defsort);
 
-	self.paginate(query.page, query.limit, maxlimit || 50);
+	maxlimit && self.paginate(query.page, query.limit, maxlimit || 50);
 	return self;
 };
 
