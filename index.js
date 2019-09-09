@@ -1479,12 +1479,13 @@ QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
 	var skipped;
 	var allowed;
 	var key;
+	var tmp;
 
 	if (skipfilter) {
 		key = 'QBS' + skipfilter;
 		skipped = CACHE[key];
 		if (!skipped) {
-			var tmp = skipfilter.split(',').trim();
+			tmp = skipfilter.split(',').trim();
 			var obj = {};
 			for (var i = 0; i < tmp.length; i++)
 				obj[tmp[i]] = 1;
@@ -1496,14 +1497,17 @@ QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
 		key = 'QBF' + allowedfields;
 		allowed = CACHE[key];
 		if (!allowed) {
-			var tmp = allowedfields.split(',').trim();
 			var obj = {};
 			var arr = [];
+			var filter = [];
+			tmp = allowedfields.split(',').trim();
 			for (var i = 0; i < tmp.length; i++) {
-				obj[tmp[i]] = 1;
-				arr.push(tmp[i]);
+				var k = tmp[i].split(':').trim();
+				obj[k[0]] = 1;
+				arr.push(k[0]);
+				k[1] && filter.push({ name: k[0], type: k[1] });
 			}
-			allowed = CACHE[key] = { keys: arr, meta: obj };
+			allowed = CACHE[key] = { keys: arr, meta: obj, filter: filter };
 		}
 	}
 
@@ -1544,6 +1548,13 @@ QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
 				}
 				self.options.fields.push(schema.fields[i]);
 			}
+		}
+	}
+
+	if (allowed && allowed.filter) {
+		for (var i = 0; i < allowed.filter.length; i++) {
+			tmp = allowed.filter[i];
+			self.gridfilter(tmp.name, query, tmp.type);
 		}
 	}
 
