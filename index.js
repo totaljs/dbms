@@ -1466,7 +1466,7 @@ QB.gridfields = function(fields, allowed) {
 	return self;
 };
 
-QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
+QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit) {
 
 	if (typeof(defsort) === 'number') {
 		maxlimit = defsort;
@@ -1521,18 +1521,14 @@ QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
 		fields = fields.replace(REG_FIELDS_CLEANER, '').split(',');
 		for (var i = 0; i < fields.length; i++) {
 			var field = fields[i];
-			if (allowed) {
-				if (allowed.meta[field]) {
-					self.options.fields.push(self.options.dbname === 'pg' ? ('"' + fields[i] + '"') : fields[i]);
-					fieldscount++;
-				}
-			} else {
-				if (schema.schema[field]) {
-					if (skipped && skipped[field])
-						continue;
-					self.options.fields.push(field);
-					fieldscount++;
-				}
+			if (allowed && allowed.meta[field]) {
+				self.options.fields.push(self.options.dbname === 'pg' ? ('"' + fields[i] + '"') : fields[i]);
+				fieldscount++;
+			} else if (schema.schema[field]) {
+				if (skipped && skipped[field])
+					continue;
+				self.options.fields.push(field);
+				fieldscount++;
 			}
 		}
 	}
@@ -1541,13 +1537,11 @@ QB.automate = function($, allowedfields, skipfilter, defsort, maxlimit) {
 		if (allowed) {
 			for (var i = 0; i < allowed.keys.length; i++)
 				self.options.fields.push(allowed.keys[i]);
-		} else {
-			for (var i = 0; i < schema.fields.length; i++) {
-				if (skipped && skipped[schema.fields[i]]) {
-					continue;
-				}
-				self.options.fields.push(schema.fields[i]);
-			}
+		}
+		for (var i = 0; i < schema.fields.length; i++) {
+			if (skipped && skipped[schema.fields[i]])
+				continue;
+			self.options.fields.push(schema.fields[i]);
 		}
 	}
 
@@ -1603,6 +1597,10 @@ QB.gridfilter = function(name, obj, type, key) {
 
 	var builder = this;
 	var value = obj[name];
+
+	if (!value)
+		return builder;
+
 	var arr, val;
 
 	if (!key)
