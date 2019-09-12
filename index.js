@@ -1505,7 +1505,7 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit) {
 				var k = tmp[i].split(':').trim();
 				obj[k[0]] = 1;
 				arr.push(k[0]);
-				k[1] && filter.push({ name: k[0], type: k[1] });
+				k[1] && filter.push({ name: k[0], type: (k[1] || '').toLowerCase() });
 			}
 			allowed = CACHE[key] = { keys: arr, meta: obj, filter: filter };
 		}
@@ -1556,7 +1556,19 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit) {
 		var name = schema.fields[i];
 		if ((!skipped || !skipped[name]) && query[name]) {
 			var field = schema.schema[name];
-			self.gridfilter(name, query, field.raw);
+			var type = 'string';
+			switch (field.type) {
+				case 2:
+					type = 'number';
+					break;
+				case 4:
+					type = 'boolean';
+					break;
+				case 5:
+					type = 'date';
+					break;
+			}
+			self.gridfilter(name, query, type);
 		}
 	}
 
