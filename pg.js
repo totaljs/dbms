@@ -72,6 +72,21 @@ function select(client, cmd) {
 	});
 }
 
+function check(client, cmd) {
+
+	var builder = cmd.builder;
+	var opt = builder.options;
+	var params = [];
+	var q = 'SELECT 1 FROM ' + opt.table + WHERE(builder, null, null, params);
+
+	builder.db.$debug && builder.db.$debug(q);
+	client.query(q, params, function(err, response) {
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
+		var is = response && response.rows ? response.rows[0] != null : false;
+		builder.$callback(err, is);
+	});
+}
+
 function query(client, cmd) {
 	var builder = cmd.builder;
 	var opt = builder.options;
@@ -385,6 +400,9 @@ function clientcommand(cmd, client, self) {
 		case 'find':
 		case 'read':
 			select(client, cmd);
+			break;
+		case 'check':
+			check(client, cmd);
 			break;
 		case 'list':
 			list(client, cmd);

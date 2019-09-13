@@ -328,7 +328,7 @@ DP.list = DP.listing = function(table) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'list');
 	builder.table(table);
-	builder.take(100);
+	builder.options.take = 100;
 	self.$commands.push({ type: 'list', builder: builder });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
@@ -339,8 +339,21 @@ DP.read = DP.one = function(table) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'read');
 	builder.table(table);
-	builder.first();
+	builder.options.first = true;
+	builder.options.take = 1;
 	self.$commands.push({ type: 'read', builder: builder });
+	self.$op && clearImmediate(self.$op);
+	self.$op = setImmediate(self.$next);
+	return builder;
+};
+
+DP.check = function(table) {
+	var self = this;
+	var builder = new QueryBuilder(self, 'check');
+	builder.table(table);
+	builder.options.first = true;
+	builder.options.take = 1;
+	self.$commands.push({ type: 'check', builder: builder });
 	self.$op && clearImmediate(self.$op);
 	self.$op = setImmediate(self.$next);
 	return builder;
@@ -350,8 +363,8 @@ DP.stream = function(table, limit, callback, done) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'find');
 	builder.table(table);
-	builder.take(limit);
-	builder.skip(0);
+	builder.options.take = limit;
+	builder.options.skip = 0;
 
 	var count = 0;
 	var page = 1;
@@ -371,7 +384,7 @@ DP.stream = function(table, limit, callback, done) {
 				return;
 			}
 
-			builder.skip(limit * (page++));
+			builder.options.skip = limit * (page++);
 			var db = new DBMS(builder.$errors);
 			builder.db = db;
 			db.$commands.push({ type: 'find', builder: builder });
@@ -471,7 +484,11 @@ DP.add = DP.insert = function(table, value, unique) {
 	var builder = new QueryBuilder(self, 'insert');
 	builder.table(table);
 	builder.value = value || {};
-	unique && builder.first();
+
+	if (unique) {
+		builder.options.first = true;
+		builder.options.take = 1;
+	}
 
 	// Total.js schemas
 	if (builder.value.$clean)
