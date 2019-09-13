@@ -48,7 +48,7 @@ function createclient(opt) {
 	return opt.options.native ? new Database.native.Client(opt.options) : new Database.Client(opt.options);
 }
 
-function select(client, cmd) {
+function select(client, cmd, repeated) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
@@ -57,8 +57,8 @@ function select(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
-		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
+		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (opt.first)
 			rows = rows.length ? rows[0] : null;
@@ -432,7 +432,7 @@ function clientcommand(cmd, client, self) {
 	}
 }
 
-exports.run = function(opt, self, cmd) {
+exports.run = function(opt, self, cmd, repeated) {
 
 
 	var conn = self.$conn[opt.id];
@@ -449,11 +449,22 @@ exports.run = function(opt, self, cmd) {
 
 	conn.driver.connect(function(err, client) {
 		if (err) {
+
 			opt.onerror && opt.onerror(err);
+
+			if ((!repeated || repeated < 3) && err.toString().indexOf('many clients') !== -1) {
+				// try again
+				setTimeout(function() {
+					exports.run(opt, self, cmd, (repeated || 0) + 1);
+				}, 200);
+				return;
+			}
+
 			if (cmd.builder)
 				cmd.builder.$callback(err);
 			else
 				cmd.db.$next(err);
+
 		} else {
 			conn.client = client;
 			client.$opt = opt;
