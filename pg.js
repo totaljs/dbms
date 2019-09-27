@@ -630,6 +630,10 @@ function WHERE(builder, scalar, group, params) {
 					current = cmd.value;
 				condition.push('(' + (current == undefined ? cmd.query : cmd.query.replace(REG_PARAMS, replace)) + ')');
 				break;
+			case 'permit':
+				opuse && condition.length && condition.push(op);
+				condition.push('(' + ((cmd.useridfield ? ('"' + cmd.useridfield + '"=' + pg_escape(cmd.userid) + ' OR ') : '') + '"' + cmd.name + '" && $' + params.push([cmd.value])) + ')');
+				break;
 			case 'empty':
 				opuse && condition.length && condition.push(op);
 				condition.push('(' + cmd.name + ' IS NULL OR LENGTH(' + cmd.name + +'::text)=0)');

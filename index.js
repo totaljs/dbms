@@ -852,6 +852,21 @@ QB.where = function(name, compare, value) {
 	return self;
 };
 
+QB.permit = function(name, type, value, useridfield, userid) {
+
+	// type: R read
+	// type: W write
+	// type: D delete
+
+	var self = this;
+	var arr = [];
+	for (var i = 0; i < value.length; i++)
+		arr.push(type + value[i]);
+
+	self.$commands.push({ type: 'permit', name: name, value: arr, useridfield: useridfield, userid: userid });
+	return self;
+};
+
 QB.in = function(name, value) {
 	var self = this;
 	self.$commands.push({ type: 'in', name: name, value: value });
