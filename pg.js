@@ -48,7 +48,7 @@ function createclient(opt) {
 	return opt.options.native ? new Database.native.Client(opt.options) : new Database.Client(opt.options);
 }
 
-function select(client, cmd, repeated) {
+function select(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
@@ -632,7 +632,10 @@ function WHERE(builder, scalar, group, params) {
 				break;
 			case 'permit':
 				opuse && condition.length && condition.push(op);
-				condition.push('(' + ((cmd.useridfield ? ('"' + cmd.useridfield + '"=' + pg_escape(cmd.userid) + ' OR ') : '') + '"' + cmd.name + '" && $' + params.push([cmd.value])) + ')');
+				if (cmd.must)
+					condition.push('(' + ((cmd.useridfield ? ('"' + cmd.useridfield + '"=' + pg_escape(cmd.userid) + ' OR ') : '') + '"' + cmd.name + '" && $' + params.push([cmd.value])) + ')');
+				else
+					condition.push('(' + ((cmd.useridfield ? ('"' + cmd.useridfield + '"=' + pg_escape(cmd.userid) + ' OR ') : '') + 'array_length("' + cmd.name + '",1) IS NULL OR "' + cmd.name + '" && $' + params.push([cmd.value])) + ')');
 				break;
 			case 'empty':
 				opuse && condition.length && condition.push(op);

@@ -852,7 +852,7 @@ QB.where = function(name, compare, value) {
 	return self;
 };
 
-QB.permit = function(name, type, value, useridfield, userid) {
+QB.permit = function(name, type, value, useridfield, userid, must) {
 
 	// type: R read
 	// type: W write
@@ -863,7 +863,7 @@ QB.permit = function(name, type, value, useridfield, userid) {
 	for (var i = 0; i < value.length; i++)
 		arr.push(type + value[i]);
 
-	self.$commands.push({ type: 'permit', name: name, value: arr, useridfield: useridfield, userid: userid });
+	self.$commands.push({ type: 'permit', name: name, value: arr, useridfield: useridfield, userid: userid, must: must });
 	return self;
 };
 
