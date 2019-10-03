@@ -583,28 +583,36 @@ function WHERE(builder, scalar, group, params) {
 				condition.push(cmd.name + ((cmd.value == null || tmp == 'null') && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
 				break;
 			case 'in':
-				opuse && condition.length && condition.push(op);
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
 				if (cmd.value instanceof Array) {
 					tmp = [];
 					for (var j = 0; j < cmd.value.length; j++)
 						tmp.push(ESCAPE(cmd.value[j]));
-					condition.push(cmd.name + ' IN (' + tmp.join(',') + ')');
-				} else
+					if (tmp.length) {
+						opuse && condition.length && condition.push(op);
+						condition.push(cmd.name + ' IN (' + tmp.join(',') + ')');
+					}
+				} else {
+					opuse && condition.length && condition.push(op);
 					condition.push(cmd.name + '=' + ESCAPE(cmd.value));
+				}
 				break;
 			case 'notin':
-				opuse && condition.length && condition.push(op);
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
 				if (cmd.value instanceof Array) {
 					tmp = [];
 					for (var j = 0; j < cmd.value.length; j++)
 						tmp.push(ESCAPE(cmd.value[j]));
-					condition.push(cmd.name + ' NOT IN (' + tmp.join(',') + ')');
-				} else
+					if (tmp.length) {
+						opuse && condition.length && condition.push(op);
+						condition.push(cmd.name + ' NOT IN (' + tmp.join(',') + ')');
+					}
+				} else {
+					opuse && condition.length && condition.push(op);
 					condition.push(cmd.name + '<>' + ESCAPE(cmd.value));
+				}
 				break;
 			case 'between':
 				opuse && condition.length && condition.push(op);
