@@ -576,6 +576,10 @@ function WHERE(builder, scalar, group, params) {
 
 	for (var i = 0; i < builder.$commands.length; i++) {
 		var cmd = builder.$commands[i];
+
+		if (builder.options.islanguage && cmd.name && cmd.name[cmd.name.length - 1] === '§')
+			cmd.name = cmd.name.substring(0, cmd.name.length - 1) + (builder.options.language || '');
+
 		switch (cmd.type) {
 			case 'where':
 				tmp = ESCAPE(cmd.value);
@@ -730,12 +734,22 @@ function FIELDS(builder) {
 		for (var i = 0; i < fields.length; i++) {
 			var field = fields[i];
 			if (field[0] === '-') {
+
 				if (builder.options.fieldsrem)
 					builder.options.fieldsrem.push(field.substring(1));
 				else
 					builder.options.fieldsrem = [field.substring(1)];
+
 				continue;
 			}
+
+			if (builder.options.islanguage) {
+				if (field[field.length - 1] === '§') {
+					field = field.substring(0, field.length - 1);
+					field = (field + builder.options.language) + ' AS ' + field;
+				}
+			}
+
 			output += (output ? ',' : '') + field;
 		}
 		if (output && builder.$joinmeta)
@@ -745,7 +759,7 @@ function FIELDS(builder) {
 	fields = builder.options.subquery;
 	if (fields && fields.length) {
 		for (var i = 0; i < fields.length; i++)
-			plus += fields[i].name ? ('(' + fields[i].query + ') as ' + fields[i].name) : fields[i].query;
+			plus += fields[i].name ? ('(' + fields[i].query + ') AS ' + fields[i].name) : fields[i].query;
 	}
 
 	return (output ? output : '*') + (plus ? (',' + plus) : '');

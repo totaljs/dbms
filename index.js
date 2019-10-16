@@ -1127,6 +1127,13 @@ QB.fields = function(fields) {
 	return self;
 };
 
+QB.language = function(language, prefix) {
+	var self = this;
+	self.options.language = (language ? ((prefix == null ? '_' : (prefix || '')) + language) : '');
+	self.options.islanguage = true;
+	return self;
+};
+
 QB.year = function(name, compare, value) {
 
 	if (value === undefined) {
@@ -1498,7 +1505,7 @@ QB.gridfields = function(fields, allowed) {
 	return self;
 };
 
-QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit) {
+QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localized) {
 
 	if (typeof(defsort) === 'number') {
 		maxlimit = defsort;
@@ -1532,11 +1539,20 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit) {
 			var obj = {};
 			var arr = [];
 			var filter = [];
+
+			if (localized)
+				localized = localized.split(',');
+
 			tmp = allowedfields.split(',').trim();
 			for (var i = 0; i < tmp.length; i++) {
 				var k = tmp[i].split(':').trim();
 				obj[k[0]] = 1;
-				arr.push(k[0]);
+
+				if (localized && localized.indexOf(k[0]) !== -1)
+					arr.push(k[0] + '§');
+				else
+					arr.push(k[0]);
+
 				k[1] && filter.push({ name: k[0], type: (k[1] || '').toLowerCase() });
 			}
 			allowed = CACHE[key] = { keys: arr, meta: obj, filter: filter };
