@@ -479,7 +479,7 @@ DP.save = function(table, isUpdate, obj, fn) {
 	return builder;
 };
 
-DP.add = DP.insert = function(table, value, unique) {
+DP.add = DP.ins = DP.insert = function(table, value, unique) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'insert');
 	builder.table(table);
