@@ -1127,8 +1127,10 @@ QB.fields = function(fields) {
 	return self;
 };
 
-QB.language = function(language, prefix) {
+QB.language = function(language, prefix, skip) {
 	var self = this;
+	if (skip && language && language === skip)
+		language = null;
 	self.options.language = (language ? ((prefix == null ? '_' : (prefix || '')) + language) : '');
 	self.options.islanguage = true;
 	return self;
