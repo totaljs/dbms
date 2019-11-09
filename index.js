@@ -1588,10 +1588,12 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localize
 			for (var i = 0; i < allowed.keys.length; i++)
 				self.options.fields.push(allowed.keys[i]);
 		}
-		for (var i = 0; i < schema.fields.length; i++) {
-			if (skipped && skipped[schema.fields[i]])
-				continue;
-			self.options.fields.push(schema.fields[i]);
+		if (schema.fields) {
+			for (var i = 0; i < schema.fields.length; i++) {
+				if (skipped && skipped[schema.fields[i]])
+					continue;
+				self.options.fields.push(schema.fields[i]);
+			}
 		}
 	}
 
@@ -1602,23 +1604,25 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localize
 		}
 	}
 
-	for (var i = 0; i < schema.fields.length; i++) {
-		var name = schema.fields[i];
-		if ((!skipped || !skipped[name]) && query[name]) {
-			var field = schema.schema[name];
-			var type = 'string';
-			switch (field.type) {
-				case 2:
-					type = 'number';
-					break;
-				case 4:
-					type = 'boolean';
-					break;
-				case 5:
-					type = 'date';
-					break;
+	if (schema.fields) {
+		for (var i = 0; i < schema.fields.length; i++) {
+			var name = schema.fields[i];
+			if ((!skipped || !skipped[name]) && query[name]) {
+				var field = schema.schema[name];
+				var type = 'string';
+				switch (field.type) {
+					case 2:
+						type = 'number';
+						break;
+					case 4:
+						type = 'boolean';
+						break;
+					case 5:
+						type = 'date';
+						break;
+				}
+				self.gridfilter(name, query, type);
 			}
-			self.gridfilter(name, query, type);
 		}
 	}
 
