@@ -1639,9 +1639,6 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localize
 					can = false;
 			}
 
-			if (!can && schema.schema[name])
-				can = true;
-
 			if (can)
 				self.sort(name, query.sort[index + 1] === 'd');
 			else if (defsort)
