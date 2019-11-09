@@ -159,6 +159,11 @@ DP.next = function() {
 	var cmd = self.$commands.shift();
 	logger && loggerend(self);
 
+	if (self.$op) {
+		clearImmediate(self.$op);
+		self.$op = null;
+	}
+
 	if (cmd) {
 
 		if (cmd.builder && self.prev && self.prev.builder) {
@@ -235,7 +240,10 @@ DP.next = function() {
 
 			if (stop) {
 				self.$commands = null;
-				self.$callback && self.$callback(self.$errors, null);
+				if (self.$callback) {
+					self.$callback(self.$errors, null);
+					self.$callback = null;
+				}
 				self.forcekill();
 			} else
 				setImmediate(self.$next);
@@ -260,13 +268,26 @@ DP.next = function() {
 		self.prev = cmd;
 
 	} else {
+
 		self.forcekill();
 		var err = self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null;
-		self.$callback && self.$callback(err, self.$output);
-		if (err)
-			self.$callbackno && self.$callbackno(err);
-		else
-			self.$callbackok && self.$callbackok(self.$output);
+
+		if (self.$callback) {
+			self.$callback(err, self.$output);
+			self.$callback = null;
+		}
+
+		if (err) {
+			if (self.$callbackno) {
+				self.$callbackno(err);
+				self.$callbackno = null;
+			}
+		} else {
+			if (self.$callbackok) {
+				self.$callbackok(self.$output);
+				self.$callbackok = null;
+			}
+		}
 	}
 
 	return self;
@@ -312,7 +333,7 @@ DP.all = DP.find = function(table) {
 	var builder = new QueryBuilder(self, 'find');
 	builder.table(table);
 	self.$commands.push({ type: 'find', builder: builder });
-	if (!self.$joinmeta) {
+	if (!self.$joinmeta && !self.busy) {
 		self.$op && clearImmediate(self.$op);
 		self.$op = setImmediate(self.$next);
 	}
@@ -330,8 +351,10 @@ DP.list = DP.listing = function(table) {
 	builder.table(table);
 	builder.options.take = 100;
 	self.$commands.push({ type: 'list', builder: builder });
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
 	return builder;
 };
 
@@ -342,8 +365,10 @@ DP.read = DP.one = function(table) {
 	builder.options.first = true;
 	builder.options.take = 1;
 	self.$commands.push({ type: 'read', builder: builder });
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
 	return builder;
 };
 
@@ -354,8 +379,10 @@ DP.check = function(table) {
 	builder.options.first = true;
 	builder.options.take = 1;
 	self.$commands.push({ type: 'check', builder: builder });
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
 	return builder;
 };
 
@@ -395,8 +422,10 @@ DP.stream = function(table, limit, callback, done) {
 
 	builder.callback(cb);
 	self.$commands.push({ type: 'find', builder: builder });
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
 	return builder;
 };
 
@@ -413,8 +442,10 @@ DP.scalar = function(table, type, name) {
 	var builder = new QueryBuilder(self, 'scalar');
 	builder.table(table);
 	self.$commands.push({ type: 'scalar', builder: builder, scalar: type, name: name });
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
 	return builder;
 };
 
@@ -495,8 +526,10 @@ DP.add = DP.ins = DP.insert = function(table, value, unique) {
 		builder.value = builder.value.$clean();
 
 	builder.$commandindex = self.$commands.push({ type: 'insert', builder: builder, unique: unique }) - 1;
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
 	return builder;
 };
 
@@ -511,8 +544,12 @@ DP.upd = DP.update = function(table, value, insert) {
 		builder.value = builder.value.$clean();
 
 	builder.$commandindex = self.$commands.push({ type: 'update', builder: builder, insert: insert }) - 1;
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
+
 	return builder;
 };
 
@@ -527,8 +564,11 @@ DP.mod = DP.modify = function(table, value, insert) {
 		builder.value = builder.value.$clean();
 
 	builder.$commandindex = self.$commands.push({ type: 'modify', builder: builder, insert: insert }) - 1;
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
 	return builder;
 };
 
@@ -545,8 +585,12 @@ DP.que = DP.query = function(conn, query, value) {
 	builder.options.db = conn || 'default';
 	self.$commands.push({ type: 'query', builder: builder, query: query, value: value });
 	value && (builder.options.params = true);
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
+
 	return builder;
 };
 
@@ -555,8 +599,12 @@ DP.rem = DP.remove = function(table) {
 	var builder = new QueryBuilder(self, 'remove');
 	builder.table(table);
 	self.$commands.push({ type: 'remove', builder: builder });
-	self.$op && clearImmediate(self.$op);
-	self.$op = setImmediate(self.$next);
+
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
+
 	return builder;
 };
 
@@ -772,8 +820,10 @@ QB.$callback = function(err, value, count) {
 	if (self.$orm)
 		opt.callbackok = opt.callbackno = opt.callback = undefined;
 
-	self.db.$op && clearImmediate(self.db.$op);
-	self.db.$op = setImmediate(self.db.$next);
+	if (!self.busy) {
+		self.db.$op && clearImmediate(self.db.$op);
+		self.db.$op = setImmediate(self.db.$next);
+	}
 };
 
 QB.make = function(fn) {
@@ -1342,8 +1392,15 @@ exports.init = function(name, connection, onerror) {
 		name = 'default';
 	}
 
-	if (typeof(connection) === 'function') {
-		onerror = connection;
+	if ((onerror === true || connection === true) && global.F) {
+		onerror = function(err, sql) {
+			F.error(new Error(err.toString() + ': ' + sql), 'DBMS');
+		};
+	}
+
+	if (connection === true || typeof(connection) === 'function') {
+		if (!onerror)
+			onerror = connection;
 		connection = name;
 		name = 'default';
 	}

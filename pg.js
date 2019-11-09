@@ -57,7 +57,7 @@ function select(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
-
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (opt.first)
@@ -81,6 +81,7 @@ function check(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var is = response && response.rows ? response.rows[0] != null : false;
 		builder.$callback(err, is);
@@ -93,6 +94,7 @@ function query(client, cmd) {
 	var q = cmd.query + WHERE(builder, null, null, cmd.value);
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, cmd.value, function(err, response) {
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (opt.first)
@@ -104,6 +106,7 @@ function query(client, cmd) {
 function command(client, sql, cmd) {
 	cmd.db.$debug && cmd.db.$debug(sql);
 	client.query(sql, function(err) {
+		cmd.builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, sql);
 		cmd.db.$next(err);
 	});
@@ -119,7 +122,7 @@ function list(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
-
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
 		var count = err ? 0 : response.rows && response.rows.length ? response.rows[0].dbmsvalue : 0;
@@ -169,7 +172,7 @@ function scalar(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 
 	client.query(q, params, function(err, response) {
-
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
@@ -254,6 +257,7 @@ function insert(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		builder.$callback(err, err == null ? (response.rows && response.rows.length ? response.rows[0][builder.$primarykey] : 1) : 0);
 	});
@@ -265,6 +269,7 @@ function insertexists(client, cmd) {
 	var q = 'SELECT 1 as dbmsvalue FROM ' + opt.table + WHERE(builder);
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, function(err, response) {
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (rows.length)
@@ -347,6 +352,7 @@ function modify(client, cmd) {
 	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		rows = rows.length ? rows[0].dbmsvalue : 0;
@@ -367,6 +373,7 @@ function remove(client, cmd) {
 	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
+		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
 		rows = rows.length ? rows[0].dbmsvalue : 0;
@@ -434,7 +441,6 @@ function clientcommand(cmd, client, self) {
 
 exports.run = function(opt, self, cmd, repeated) {
 
-
 	var conn = self.$conn[opt.id];
 
 	if (!conn) {
@@ -442,14 +448,19 @@ exports.run = function(opt, self, cmd, repeated) {
 		conn.$$destroy = destroy;
 	}
 
+	self.$op = null;
+	self.busy = true;
+
 	if (conn.client) {
 		clientcommand(cmd, conn.client, self);
 		return;
 	}
 
 	conn.driver.connect(function(err, client) {
+
 		if (err) {
 
+			self.busy = false;
 			opt.onerror && opt.onerror(err);
 
 			if ((!repeated || repeated < 3) && err.toString().indexOf('many clients') !== -1) {
