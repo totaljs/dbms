@@ -1725,6 +1725,23 @@ QB.gridfilter = function(name, obj, type, key) {
 	if (!value)
 		return builder;
 
+	if (typeof(type) === 'string') {
+		switch (type) {
+			case 'number':
+				type = Number;
+				break;
+			case 'string':
+				type = String;
+				break;
+			case 'date':
+				type = Date;
+				break;
+			case 'boolean':
+				type = Boolean;
+				break;
+		}
+	}
+
 	var arr, val;
 
 	if (!key)
@@ -1741,7 +1758,7 @@ QB.gridfilter = function(name, obj, type, key) {
 			arr[i] = convert(item, type);
 		}
 
-		if (type === Date || type === 'date') {
+		if (type === Date) {
 			if (typeof(arr[0]) === 'number') {
 				arr[0] = new Date(arr[0], 1, 1, 0, 0, 0);
 				arr[1] = new Date(arr[1], 11, 31, 23, 59, 59);
@@ -1784,7 +1801,7 @@ QB.gridfilter = function(name, obj, type, key) {
 		});*/
 	}
 
-	if (type === undefined || type === String || type === 'string') {
+	if (type === undefined || type === String) {
 		var c = value[0];
 		switch (c) {
 			case '=':
@@ -1797,7 +1814,7 @@ QB.gridfilter = function(name, obj, type, key) {
 		return builder.search(key, value);
 	}
 
-	if (type === Date || type === 'date') {
+	if (type === Date) {
 
 		if (value === 'yesterday')
 			val = NOW.add('-1 day');
