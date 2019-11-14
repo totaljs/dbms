@@ -345,12 +345,12 @@ DP.task = function(fn) {
 	return this;
 };
 
-DP.list = DP.listing = function(table) {
+DP.list = DP.listing = function(table, improved) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'list');
 	builder.table(table);
 	builder.options.take = 100;
-	self.$commands.push({ type: 'list', builder: builder });
+	self.$commands.push({ type: 'list', builder: builder, improved: improved });
 	if (!self.busy) {
 		self.$op && clearImmediate(self.$op);
 		self.$op = setImmediate(self.$next);

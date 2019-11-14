@@ -118,34 +118,55 @@ function list(client, cmd) {
 	var opt = builder.options;
 	var params = [];
 	var query =  WHERE(builder, true, null, params);
-	var q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + query;
+	var q;
 
-	builder.db.$debug && builder.db.$debug(q);
-	client.query(q, params, function(err, response) {
-		builder.db.busy = false;
-		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
+	if (cmd.improved && builder.skip) {
 
-		var count = err ? 0 : response.rows && response.rows.length ? response.rows[0].dbmsvalue : 0;
-		var fn = function(err, response) {
-
+		q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
+		builder.db.$debug && builder.db.$debug(q);
+		builder.db.busy = true;
+		client.query(q, params, function(err, response) {
+			builder.db.busy = false;
 			var rows = response ? response.rows : [];
-
-			// checks joins
-			// client.$dbms._joins(rows, builder);
 			if (!err && builder.$joins) {
-				client.$dbms._joins(rows, builder, count);
+				client.$dbms._joins(rows, builder, rows.length);
 				setImmediate(builder.db.$next);
 			} else
-				builder.$callback(err, rows, count);
-		};
+				builder.$callback(err, rows, rows.length);
+		});
 
-		if (count) {
-			q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
-			builder.db.$debug && builder.db.$debug(q);
-			client.query(q, params, fn);
-		} else
-			fn(err, null);
-	});
+	} else {
+		q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + query;
+		builder.db.$debug && builder.db.$debug(q);
+
+		client.query(q, params, function(err, response) {
+			builder.db.busy = false;
+			err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
+
+			var count = err ? 0 : response.rows && response.rows.length ? response.rows[0].dbmsvalue : 0;
+			var fn = function(err, response) {
+				builder.db.busy = false;
+
+				var rows = response ? response.rows : [];
+
+				// checks joins
+				// client.$dbms._joins(rows, builder);
+				if (!err && builder.$joins) {
+					client.$dbms._joins(rows, builder, count);
+					setImmediate(builder.db.$next);
+				} else
+					builder.$callback(err, rows, count);
+			};
+
+			if (count) {
+				builder.db.busy = true;
+				q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
+				builder.db.$debug && builder.db.$debug(q);
+				client.query(q, params, fn);
+			} else
+				fn(err, null);
+		});
+	}
 }
 
 function scalar(client, cmd) {
