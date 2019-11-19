@@ -1100,9 +1100,10 @@ QB.err = QB.error = QB.must = QB.validate = function(err, reverse) {
 	return self;
 };
 
-QB.insert = function(callback) {
+QB.insert = function(callback, params) {
 	var self = this;
 	self.options.insert = callback;
+	self.options.insertparams = params;
 	return self;
 };
 

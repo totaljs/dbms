@@ -380,7 +380,7 @@ function modify(client, cmd) {
 		if (!rows && cmd.insert) {
 			if (cmd.insert !== true)
 				cmd.builder.value = cmd.insert;
-			cmd.builder.options.insert && cmd.builder.options.insert(cmd.builder.value);
+			cmd.builder.options.insert && cmd.builder.options.insert(cmd.builder.value, cmd.builder.options.insertparams);
 			insert(client, cmd);
 		} else
 			builder.$callback(err, rows);
