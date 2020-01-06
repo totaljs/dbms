@@ -190,7 +190,15 @@ DP.next = function() {
 
 		if (cmd.type === 'task') {
 			cmd.value.call(self, self.$outputall, self.$lastoutput);
-			setImmediate(self.$next);
+			if (self.$errors.length) {
+				self.$commands = null;
+				if (self.$callback) {
+					self.$callback(self.$errors, null);
+					self.$callback = null;
+				}
+				self.forcekill();
+			} else
+				setImmediate(self.$next);
 		} else if (cmd.type === 'validate') {
 
 			var stop = false;
