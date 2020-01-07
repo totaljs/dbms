@@ -949,6 +949,14 @@ QB.search = function(name, value, compare) {
 	return self;
 };
 
+QB.searchall = function(name, value) {
+	var self = this;
+	if (!(value instanceof Array))
+		value = value.split(' ');
+	self.$commands.push({ type: 'searchall', name: name, value: value });
+	return self;
+};
+
 QB.fulltext = function(name, value, weight) {
 	var self = this;
 	self.$commands.push({ type: 'fulltext', name: name, value: value, weight: weight });

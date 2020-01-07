@@ -659,6 +659,15 @@ function WHERE(builder, scalar, group, params) {
 				opuse && condition.length && condition.push(op);
 				condition.push(cmd.name + ' ILIKE ' + tmp);
 				break;
+
+			case 'findall':
+				tmp = '';
+				for (var j = 0; j < cmd.value.length; j++)
+					tmp += (tmp ? ' AND ' : '') + cmd.name + ' ILIKE ' + ESCAPE('%' + cmd.value[j] + '%');
+				opuse && condition.length && condition.push(op);
+				condition.push('(' + tmp + ')');
+				break;
+
 			case 'fulltext':
 				tmp = ESCAPE('%' + cmd.value.toLowerCase() + '%');
 				opuse && condition.length && condition.push(op);
