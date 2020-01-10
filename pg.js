@@ -660,7 +660,7 @@ function WHERE(builder, scalar, group, params) {
 				condition.push(cmd.name + ' ILIKE ' + tmp);
 				break;
 
-			case 'findall':
+			case 'searchall':
 				tmp = '';
 				for (var j = 0; j < cmd.value.length; j++)
 					tmp += (tmp ? ' AND ' : '') + cmd.name + ' ILIKE ' + ESCAPE('%' + cmd.value[j] + '%');
