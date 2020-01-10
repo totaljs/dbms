@@ -710,6 +710,7 @@ function WHERE(builder, scalar, group, params) {
 				continue;
 			case 'end':
 				condition.push(')');
+				op = 'AND';
 				break;
 			case 'and':
 				opuse && condition.length && condition.push(op);
