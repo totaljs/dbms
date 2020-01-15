@@ -248,6 +248,8 @@ function insert(client, cmd) {
 			case '+':
 			case '*':
 			case '/':
+			case '>':
+			case '<':
 				key = key.substring(1);
 				break;
 			case '=':
@@ -350,6 +352,12 @@ function modify(client, cmd) {
 				params.push(val ? val : 0);
 				key = key.substring(1);
 				type = '"' + key + '"=COALESCE(' + key + ',0)' + c + '$' + (index++);
+				break;
+			case '>':
+			case '<':
+				params.push(val ? val : 0);
+				key = key.substring(1);
+				type = '"' + key + '"=' + (c === '>' ? 'GREATEST' : 'LEAST') + '(' + key + ',$' + (index++) + ')';
 				break;
 			case '!':
 				// toggle
