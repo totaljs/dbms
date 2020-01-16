@@ -700,7 +700,7 @@ function WHERE(builder, scalar, group, params) {
 				break;
 			case 'empty':
 				opuse && condition.length && condition.push(op);
-				condition.push('(' + cmd.name + ' IS NULL OR LENGTH(' + cmd.name +'::text)=0)');
+				condition.push('(' + cmd.name + ' IS NULL OR LENGTH(' + cmd.name + '::text)=0)');
 				break;
 			case 'month':
 			case 'year':
