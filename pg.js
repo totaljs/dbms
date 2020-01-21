@@ -809,10 +809,10 @@ function FIELDS(builder) {
 	fields = builder.options.subquery;
 	if (fields && fields.length) {
 		for (var i = 0; i < fields.length; i++)
-			plus += fields[i].name ? ('(' + fields[i].query + ') AS ' + fields[i].name) : fields[i].query;
+			plus += ',' + (fields[i].name ? ('(' + fields[i].query + ') AS ' + fields[i].name) : fields[i].query);
 	}
 
-	return (output ? output : '*') + (plus ? (',' + plus) : '');
+	return (output ? output : '*') + plus;
 }
 
 // Author: https://github.com/segmentio/pg-escape
