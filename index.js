@@ -419,7 +419,9 @@ DP.stream = function(table, limit, callback, done) {
 				return;
 			}
 
+			builder.db.forcekill();
 			builder.options.skip = limit * (page++);
+
 			var db = new DBMS(builder.$errors);
 			builder.db = db;
 			db.$commands.push({ type: 'find', builder: builder });
@@ -430,10 +432,23 @@ DP.stream = function(table, limit, callback, done) {
 
 	builder.callback(cb);
 	self.$commands.push({ type: 'find', builder: builder });
+
 	if (!self.busy) {
 		self.$op && clearImmediate(self.$op);
-		self.$op = setImmediate(self.$next);
+		self.$op = setImmediate(function() {
+			var is = false;
+			for (var i = 0; i < builder.$commands.length; i++) {
+				var cmd = builder.$commands[i];
+				if (cmd.type === 'sort') {
+					is = true;
+					break;
+				}
+			}
+			!is && builder.sort('1');
+			self.$next();
+		});
 	}
+
 	return builder;
 };
 
