@@ -909,6 +909,14 @@ QB.eq = function() {
 	return this;
 };
 
+QB.inarray = function(name, value, ornull) {
+	var self = this;
+	if (!(value instanceof Array))
+		value = [value];
+	self.query((ornull ? ('array_length(' + name + ',1) IS NULL OR ') : '') + name + ' && $1', [value]);
+	return self;
+};
+
 QB.where = function(name, compare, value) {
 
 	if (value === undefined) {
