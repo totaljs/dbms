@@ -678,6 +678,11 @@ QB.prevfilter = function() {
 	return self;
 };
 
+QB.custom = function(fn) {
+	this.$commands.push({ type: 'custom', fn: fn });
+	return this;
+};
+
 QB.prevfields = function() {
 	var self = this;
 	self.$prevfields = 1;

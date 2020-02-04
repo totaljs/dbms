@@ -626,6 +626,9 @@ function WHERE(builder, scalar, group, params) {
 				opuse && condition.length && condition.push(op);
 				condition.push(cmd.name + ((cmd.value == null || tmp == 'null') && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
 				break;
+			case 'custom':
+				cmd.fn.call(builder, builder, builder.db.$output, builder.db.$lastoutput);
+				break;
 			case 'in':
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
