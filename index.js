@@ -1448,6 +1448,10 @@ exports.init = function(name, connection, onerror) {
 			onerror = connection;
 		connection = name;
 		name = 'default';
+		var onerror2 = onerror;
+		onerror = function(err, sql) {
+			onerror2(new Error(err.toString() + ': ' + sql));
+		};
 	}
 
 	// Total.js
