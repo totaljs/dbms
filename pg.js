@@ -207,7 +207,7 @@ function insert(client, cmd) {
 
 	var builder = cmd.builder;
 
-	cmd.builder.options.transform && cmd.builder.options.transform(cmd.builder.value);
+	cmd.builder.options.transform && cmd.builder.options.transform(cmd.builder.value, cmd.builder.db.$output, cmd.builder.db.$lastoutput);
 
 	var keys = Object.keys(builder.value);
 	var params = [];
@@ -307,7 +307,7 @@ function insertexists(client, cmd) {
 
 function modify(client, cmd) {
 
-	cmd.builder.options.transform && cmd.builder.options.transform(cmd.builder.value);
+	cmd.builder.options.transform && cmd.builder.options.transform(cmd.builder.value, cmd.builder.db.$output, cmd.builder.db.$lastoutput);
 
 	var keys = Object.keys(cmd.builder.value);
 	var fields = [];
