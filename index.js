@@ -1573,6 +1573,11 @@ var convert = function(value, type) {
 	return value;
 };
 
+QB.transform = function(fn) {
+	this.options.transform = fn;
+	return this;
+};
+
 QB.gridfields = function(fields, allowed) {
 
 	var self = this;

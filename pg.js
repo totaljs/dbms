@@ -206,7 +206,10 @@ function scalar(client, cmd) {
 function insert(client, cmd) {
 
 	var builder = cmd.builder;
-	var keys = Object.keys(cmd.builder.value);
+
+	cmd.builder.options.transform && cmd.builder.options.transform(cmd.builder.value);
+
+	var keys = Object.keys(builder.value);
 	var params = [];
 	var fields = [];
 	var values = [];
@@ -215,14 +218,14 @@ function insert(client, cmd) {
 
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
-		var val = cmd.builder.value[key];
+		var val = builder.value[key];
 		if (val === undefined || BLACKLIST[key])
 			continue;
 
-		if (cmd.builder.options.fields && cmd.builder.options.fields.length) {
+		if (builder.options.fields && builder.options.fields.length) {
 			var skip = true;
-			for (var j = 0; j < cmd.builder.options.fields.length; j++) {
-				var field = cmd.builder.options.fields[j];
+			for (var j = 0; j < builder.options.fields.length; j++) {
+				var field = builder.options.fields[j];
 				if (field[0] === '-') {
 					field = field.substring(1);
 					if (field === key || (ISOP[key[0]] && field === key.substring(1))) {
@@ -272,7 +275,7 @@ function insert(client, cmd) {
 			values.push(val);
 		} else {
 			values.push('$' + index++);
-			params.push(val == null ? null : typeof(val) === 'function' ? val(cmd.builder.value) : val);
+			params.push(val == null ? null : typeof(val) === 'function' ? val(builder.value) : val);
 		}
 	}
 
@@ -303,6 +306,8 @@ function insertexists(client, cmd) {
 }
 
 function modify(client, cmd) {
+
+	cmd.builder.options.transform && cmd.builder.options.transform(cmd.builder.value);
 
 	var keys = Object.keys(cmd.builder.value);
 	var fields = [];
