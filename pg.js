@@ -681,7 +681,7 @@ function WHERE(builder, scalar, group, params) {
 				for (var j = 0; j < cmd.value.length; j++)
 					tmp += (tmp ? ' AND ' : '') + cmd.name + ' ILIKE ' + ESCAPE('%' + cmd.value[j] + '%');
 				opuse && condition.length && condition.push(op);
-				condition.push('(' + tmp + ')');
+				condition.push('(' + (tmp || '0=1') + ')');
 				break;
 
 			case 'fulltext':
