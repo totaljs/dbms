@@ -1525,10 +1525,16 @@ global.DBMS.measure = function(callback, file) {
 		callback = tmp;
 	}
 
-	var stats = { c: 0, cc: 0, r: 0, rc: 0, u: 0, uc: 0, q: 0, qc: 0, d: 0, dc: 0, count: 0 };
+	var stats = { c: 0, cc: 0, r: 0, rc: 0, u: 0, uc: 0, q: 0, qc: 0, d: 0, dc: 0, count: 0, ticks: 0 };
 	var usage = {};
 
 	ON('dbms', function(type, table, db) {
+
+		var now = Date.now();
+
+		stats.idle = stats.ticks ? (now - stats.ticks) : null;
+		stats.ticks = now;
+
 		switch (type) {
 			case 'insert':
 				stats.c++;
@@ -1568,6 +1574,18 @@ global.DBMS.measure = function(callback, file) {
 			usage[key][type] = 1;
 	});
 
+	var createcol = function(name, size, align) {
+		name = name + '';
+
+		if (align === 2) {
+			name = name.padLeft(size - 3, ' ') + ' ';
+		} else {
+			name = name.padRight(size - 2, ' ');
+		}
+
+		return name + '| ';
+	};
+
 	ON('service', function() {
 
 		var keys = Object.keys(usage);
@@ -1575,7 +1593,7 @@ global.DBMS.measure = function(callback, file) {
 
 		output.reqmin = 0;
 		output.count = 0;
-		output.create = { reqmin: 0, count: 0, top: [] };
+		output.insert = { reqmin: 0, count: 0, top: [] };
 		output.update = { reqmin: 0, count: 0, top: [] };
 		output.delete = { reqmin: 0, count: 0, top: [] };
 		output.select = { reqmin: 0, count: 0, top: [] };
@@ -1583,33 +1601,36 @@ global.DBMS.measure = function(callback, file) {
 
 		var count = 0;
 
+		output.reqmin = stats.count;
+		output.count = count;
+
 		for (var i = 0; i < keys.length; i++) {
 			var key = keys[i];
 			var obj = usage[key];
 			var keys2 = Object.keys(obj);
 			for (var j = 0; j < keys2.length; j++) {
 				var key2 = keys2[j];
-				output[key2].count += obj[key2];
-				output[key2].top.push({ db: key, count: obj[key2] });
-				count += obj[key2];
+				if (output[key2]) {
+					output[key2].count += obj[key2];
+					output[key2].top.push({ table: key, count: obj[key2] });
+					count += obj[key2];
+				}
 			}
 		}
 
-		output.reqmin = stats.count;
-		output.count = count;
-		output.create.usage = ((stats.c / stats.count) * 100).floor(1);
-		output.select.usage = ((stats.r / stats.count) * 100).floor(1);
-		output.delete.usage = ((stats.d / stats.count) * 100).floor(1);
-		output.update.usage = ((stats.u / stats.count) * 100).floor(1);
-		output.query.usage = ((stats.q / stats.count) * 100).floor(1);
-		output.create.reqmin = stats.c;
+		output.insert.usage = stats.c && stats.count ? ((stats.c / stats.count) * 100).floor(1) : 0;
+		output.select.usage = stats.r && stats.count ? ((stats.r / stats.count) * 100).floor(1) : 0;
+		output.delete.usage = stats.d && stats.count ? ((stats.d / stats.count) * 100).floor(1) : 0;
+		output.update.usage = stats.u && stats.count ? ((stats.u / stats.count) * 100).floor(1) : 0;
+		output.query.usage = stats.q && stats.count ? ((stats.q / stats.count) * 100).floor(1) : 0;
+		output.insert.reqmin = stats.c;
 		output.select.reqmin = stats.r;
 		output.delete.reqmin = stats.d;
 		output.update.reqmin = stats.u;
 		output.query.reqmin = stats.q;
 
-		for (var i = 0; i < output.create.top.length; i++)
-			output.create.top[i].usage = ((output.create.top[i].count / output.create.count) * 100).floor(1);
+		for (var i = 0; i < output.insert.top.length; i++)
+			output.insert.top[i].usage = ((output.insert.top[i].count / output.insert.count) * 100).floor(1);
 
 		for (var i = 0; i < output.update.top.length; i++)
 			output.update.top[i].usage = ((output.update.top[i].count / output.update.count) * 100).floor(1);
@@ -1625,18 +1646,109 @@ global.DBMS.measure = function(callback, file) {
 
 		output.query.top.quicksort('usage', 'desc');
 		output.select.top.quicksort('usage', 'desc');
-		output.create.top.quicksort('usage', 'desc');
+		output.insert.top.quicksort('usage', 'desc');
 		output.update.top.quicksort('usage', 'desc');
 		output.delete.top.quicksort('usage', 'desc');
 
+		callback && callback(output);
+
+		var total = stats.count;
 		stats.c = 0;
 		stats.u = 0;
 		stats.r = 0;
 		stats.d = 0;
+		stats.q = 0;
 		stats.count = 0;
 
-		callback && callback(output);
-		file && require('fs').writeFile(PATH.root('dbms.json'), JSON.stringify(output, null, '    '), NOOP);
+		if (!file)
+			return;
+
+		var delimiter = '';
+		var beg = '| ';
+		var max = 61;
+		var row = '-';
+
+		for (var i = 0; i < max; i++) {
+			delimiter += '=';
+			row += '-';
+		}
+
+		row = '|' + row.substring(1, row.length - 2) + '|';
+
+		var builder = ['DBMS: ' + NOW.format('yyyy-MM-dd HH:mm:ss')];
+		builder.push(delimiter);
+		builder.push(beg + createcol('SELECT', 36) + createcol(output.select.count, 12, 2) + createcol(output.select.usage + '%', 12, 2));
+		builder.push(beg + createcol('INSERT', 36) + createcol(output.insert.count, 12, 2) + createcol(output.insert.usage + '%', 12, 2));
+		builder.push(beg + createcol('UPDATE', 36) + createcol(output.update.count, 12, 2) + createcol(output.update.usage + '%', 12, 2));
+		builder.push(beg + createcol('DELETE', 36) + createcol(output.delete.count, 12, 2) + createcol(output.delete.usage + '%', 12, 2));
+		builder.push(beg + createcol('QUERY', 36) + createcol(output.query.count, 12, 2) + createcol(output.query.usage + '%', 12, 2));
+		builder.push(row);
+		builder.push(beg + createcol('Req/min.', 36) + createcol('', 12, 2) + createcol(total, 12, 2));
+		builder.push(beg + createcol('Idle time', 36) + createcol('', 12, 2) + createcol(stats.idle + 'ms', 12, 2));
+
+		delimiter = delimiter.substring(0, max);
+
+		if (output.select.top.length) {
+			builder.push('');
+			builder.push(delimiter);
+			builder.push(beg + createcol('SELECT', 36) + createcol(output.select.count, 12, 2) + createcol(output.select.usage + '%', 12, 2));
+			builder.push(row);
+			for (var i = 0; i < output.select.top.length; i++) {
+				var tmp = output.select.top[i];
+				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
+			}
+		}
+
+		if (output.insert.top.length) {
+			builder.push('');
+			builder.push(delimiter);
+			builder.push(beg + createcol('INSERT', 36) + createcol(output.insert.count, 12, 2) + createcol(output.insert.usage + '%', 12, 2));
+			builder.push(row);
+
+			for (var i = 0; i < output.insert.top.length; i++) {
+				var tmp = output.insert.top[i];
+				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
+			}
+		}
+
+		if (output.update.top.length) {
+			builder.push('');
+			builder.push(delimiter);
+			builder.push(beg + createcol('UPDATE', 36) + createcol(output.update.count, 12, 2) + createcol(output.update.usage + '%', 12, 2));
+			builder.push(row);
+
+			for (var i = 0; i < output.update.top.length; i++) {
+				var tmp = output.update.top[i];
+				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
+			}
+		}
+
+		if (output.delete.top.length) {
+			builder.push('');
+			builder.push(delimiter);
+			builder.push(beg + createcol('DELETE', 36) + createcol(output.delete.count, 12, 2) + createcol(output.delete.usage + '%', 12, 2));
+			builder.push(row);
+
+			for (var i = 0; i < output.delete.top.length; i++) {
+				var tmp = output.delete.top[i];
+				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
+			}
+		}
+
+		if (output.query.top.length) {
+			builder.push('');
+			builder.push(delimiter);
+			builder.push(beg + createcol('QUERY', 36) + createcol(output.query.count, 12, 2) + createcol(output.query.usage + '%', 12, 2));
+			builder.push(row);
+
+			for (var i = 0; i < output.query.top.length; i++) {
+				var tmp = output.query.top[i];
+				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
+			}
+		}
+
+		builder.push('');
+		require('fs').writeFile(PATH.root('dbms.txt'), builder.join('\n'), NOOP);
 
 	});
 
