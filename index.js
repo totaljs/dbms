@@ -1591,8 +1591,7 @@ global.DBMS.measure = function(callback, file) {
 		return name + '| ';
 	};
 
-	// ON('service',
-	setTimeout(function() {
+	ON('service', function() {
 
 		var keys = Object.keys(usage);
 		var output = {};
@@ -1636,7 +1635,6 @@ global.DBMS.measure = function(callback, file) {
 		output.update.usagetotal = stats.updatetotal && stats.total ? ((stats.updatetotal / stats.total) * 100).floor(1) : 0;
 		output.query.usagetotal = stats.querytotal && stats.total ? ((stats.querytotal / stats.total) * 100).floor(1) : 0;
 
-console.log(stats);
 		output.insert.reqmin = stats.insert;
 		output.select.reqmin = stats.select;
 		output['delete'].reqmin = stats['delete'];
@@ -1764,7 +1762,7 @@ console.log(stats);
 		builder.push('');
 		require('fs').writeFile(PATH.root('dbms.txt'), builder.join('\n'), NOOP);
 
-	}, 1000);
+	});
 
 };
 
