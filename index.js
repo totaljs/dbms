@@ -1525,7 +1525,7 @@ global.DBMS.measure = function(callback, file) {
 		callback = tmp;
 	}
 
-	var stats = { c: 0, cc: 0, r: 0, rc: 0, u: 0, uc: 0, q: 0, qc: 0, d: 0, dc: 0, count: 0, total: 0, ticks: 0 };
+	var stats = { insert: 0, inserttotal: 0, select: 0, selecttotal: 0, update: 0, updatetotal: 0, query: 0, querytotal: 0, delete: 0, deletetotal: 0, count: 0, total: 0, ticks: 0 };
 	var usage = {};
 
 	ON('dbms', function(type, table, db) {
@@ -1537,33 +1537,33 @@ global.DBMS.measure = function(callback, file) {
 
 		switch (type) {
 			case 'insert':
-				stats.c++;
-				stats.cc++;
+				stats.insert++;
+				stats.inserttotal++;
 				stats.count++;
 				stats.total++;
 				break;
 			case 'select':
-				stats.r++;
-				stats.rc++;
+				stats.select++;
+				stats.selecttotal++;
 				stats.count++;
 				stats.total++;
 				break;
 			case 'query':
-				stats.q++;
-				stats.qc++;
+				stats.query++;
+				stats.querytotal++;
 				stats.count++;
 				stats.total++;
 				table = table.substring(0, 30);
 				break;
 			case 'udpate':
-				stats.u++;
-				stats.uc++;
+				stats.update++;
+				stats.updatetotal++;
 				stats.count++;
 				stats.total++;
 				break;
 			case 'delete':
-				stats.d++;
-				stats.dc++;
+				stats['delete']++;
+				stats.deletetotal++;
 				stats.count++;
 				stats.total++;
 				break;
@@ -1601,7 +1601,7 @@ global.DBMS.measure = function(callback, file) {
 		output.count = 0;
 		output.insert = { reqmin: 0, count: 0, top: [] };
 		output.update = { reqmin: 0, count: 0, top: [] };
-		output.delete = { reqmin: 0, count: 0, top: [] };
+		output['delete'] = { reqmin: 0, count: 0, top: [] };
 		output.select = { reqmin: 0, count: 0, top: [] };
 		output.query = { reqmin: 0, count: 0, top: [] };
 
@@ -1624,23 +1624,24 @@ global.DBMS.measure = function(callback, file) {
 			}
 		}
 
-		output.insert.usage = stats.c && stats.count ? ((stats.c / stats.count) * 100).floor(1) : 0;
-		output.select.usage = stats.r && stats.count ? ((stats.r / stats.count) * 100).floor(1) : 0;
-		output.delete.usage = stats.d && stats.count ? ((stats.d / stats.count) * 100).floor(1) : 0;
-		output.update.usage = stats.u && stats.count ? ((stats.u / stats.count) * 100).floor(1) : 0;
-		output.query.usage = stats.q && stats.count ? ((stats.q / stats.count) * 100).floor(1) : 0;
+		output.insert.usage = stats.insert && stats.count ? ((stats.insert / stats.count) * 100).floor(1) : 0;
+		output.select.usage = stats.select && stats.count ? ((stats.select / stats.count) * 100).floor(1) : 0;
+		output['delete'].usage = stats['delete'] && stats.count ? ((stats['delete'] / stats.count) * 100).floor(1) : 0;
+		output.update.usage = stats.update && stats.count ? ((stats.update / stats.count) * 100).floor(1) : 0;
+		output.query.usage = stats.query && stats.count ? ((stats.query / stats.count) * 100).floor(1) : 0;
 
-		output.insert.usagetotal = stats.cc && stats.total ? ((stats.cc / stats.total) * 100).floor(1) : 0;
-		output.select.usagetotal = stats.rc && stats.total ? ((stats.rc / stats.total) * 100).floor(1) : 0;
-		output.delete.usagetotal = stats.dc && stats.total ? ((stats.dc / stats.total) * 100).floor(1) : 0;
-		output.update.usagetotal = stats.uc && stats.total ? ((stats.uc / stats.total) * 100).floor(1) : 0;
-		output.query.usagetotal = stats.qc && stats.total ? ((stats.qc / stats.count) * 100).floor(1) : 0;
+		output.insert.usagetotal = stats.inserttotal && stats.total ? ((stats.inserttotal / stats.total) * 100).floor(1) : 0;
+		output.select.usagetotal = stats.selecttotal && stats.total ? ((stats.selecttotal / stats.total) * 100).floor(1) : 0;
+		output['delete'].usagetotal = stats.deletetotal && stats.total ? ((stats.deletetotal / stats.total) * 100).floor(1) : 0;
+		output.update.usagetotal = stats.updatetotal && stats.total ? ((stats.updatetotal / stats.total) * 100).floor(1) : 0;
+		output.query.usagetotal = stats.querytotal && stats.total ? ((stats.querytotal / stats.total) * 100).floor(1) : 0;
 
-		output.insert.reqmin = stats.c;
-		output.select.reqmin = stats.r;
-		output.delete.reqmin = stats.d;
-		output.update.reqmin = stats.u;
-		output.query.reqmin = stats.q;
+console.log(stats);
+		output.insert.reqmin = stats.insert;
+		output.select.reqmin = stats.select;
+		output['delete'].reqmin = stats['delete'];
+		output.update.reqmin = stats.update;
+		output.query.reqmin = stats.query;
 
 		for (var i = 0; i < output.insert.top.length; i++)
 			output.insert.top[i].usage = ((output.insert.top[i].count / output.insert.count) * 100).floor(1);
@@ -1651,8 +1652,8 @@ global.DBMS.measure = function(callback, file) {
 		for (var i = 0; i < output.select.top.length; i++)
 			output.select.top[i].usage = ((output.select.top[i].count / output.select.count) * 100).floor(1);
 
-		for (var i = 0; i < output.delete.top.length; i++)
-			output.delete.top[i].usage = ((output.delete.top[i].count / output.delete.count) * 100).floor(1);
+		for (var i = 0; i < output['delete'].top.length; i++)
+			output['delete'].top[i].usage = ((output['delete'].top[i].count / output['delete'].count) * 100).floor(1);
 
 		for (var i = 0; i < output.query.top.length; i++)
 			output.query.top[i].usage = ((output.query.top[i].count / output.query.count) * 100).floor(1);
@@ -1661,16 +1662,16 @@ global.DBMS.measure = function(callback, file) {
 		output.select.top.quicksort('usage', 'desc');
 		output.insert.top.quicksort('usage', 'desc');
 		output.update.top.quicksort('usage', 'desc');
-		output.delete.top.quicksort('usage', 'desc');
+		output['delete'].top.quicksort('usage', 'desc');
 
 		callback && callback(output);
 
 		var total = stats.count;
-		stats.c = 0;
-		stats.u = 0;
-		stats.r = 0;
-		stats.d = 0;
-		stats.q = 0;
+		stats.insert = 0;
+		stats.update = 0;
+		stats.select = 0;
+		stats['delete'] = 0;
+		stats.query = 0;
 		stats.count = 0;
 
 		if (!file)
@@ -1693,11 +1694,11 @@ global.DBMS.measure = function(callback, file) {
 		builder.push(beg + createcol('SELECT', 24) + createcol(output.select.count, 12, 2) + createcol(output.select.usage + '%', 12, 2) + createcol(output.select.usagetotal + '%', 12, 2));
 		builder.push(beg + createcol('INSERT', 24) + createcol(output.insert.count, 12, 2) + createcol(output.insert.usage + '%', 12, 2) + createcol(output.insert.usagetotal + '%', 12, 2));
 		builder.push(beg + createcol('UPDATE', 24) + createcol(output.update.count, 12, 2) + createcol(output.update.usage + '%', 12, 2) + createcol(output.update.usagetotal + '%', 12, 2));
-		builder.push(beg + createcol('DELETE', 24) + createcol(output.delete.count, 12, 2) + createcol(output.delete.usage + '%', 12, 2) + createcol(output.delete.usagetotal + '%', 12, 2));
+		builder.push(beg + createcol('DELETE', 24) + createcol(output['delete'].count, 12, 2) + createcol(output['delete'].usage + '%', 12, 2) + createcol(output['delete'].usagetotal + '%', 12, 2));
 		builder.push(beg + createcol('QUERY', 24) + createcol(output.query.count, 12, 2) + createcol(output.query.usage + '%', 12, 2) + createcol(output.query.usagetotal + '%', 12, 2));
 		builder.push(row);
 		builder.push(beg + createcol('Req/min.', 36) + createcol('', 12, 2) + createcol(total, 12, 2));
-		builder.push(beg + createcol('Idle time', 36) + createcol('', 12, 2) + createcol((stats.idle / 1000).floor(1) + 'ms', 12, 2));
+		builder.push(beg + createcol('Idle time', 36) + createcol('', 12, 2) + createcol((stats.idle / 1000).floor(1) + 's', 12, 2));
 
 		delimiter = delimiter.substring(0, max);
 
@@ -1736,14 +1737,14 @@ global.DBMS.measure = function(callback, file) {
 			}
 		}
 
-		if (output.delete.top.length) {
+		if (output['delete'].top.length) {
 			builder.push('');
 			builder.push(delimiter);
-			builder.push(beg + createcol('DELETE', 36) + createcol(output.delete.count, 12, 2) + createcol(output.delete.usage + '%', 12, 2));
+			builder.push(beg + createcol('DELETE', 36) + createcol(output['delete'].count, 12, 2) + createcol(output['delete'].usage + '%', 12, 2));
 			builder.push(row);
 
-			for (var i = 0; i < output.delete.top.length; i++) {
-				var tmp = output.delete.top[i];
+			for (var i = 0; i < output['delete'].top.length; i++) {
+				var tmp = output['delete'].top[i];
 				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
 			}
 		}
