@@ -1684,7 +1684,7 @@ global.DBMS.measure = function(callback, file) {
 		builder.push(beg + createcol('QUERY', 36) + createcol(output.query.count, 12, 2) + createcol(output.query.usage + '%', 12, 2));
 		builder.push(row);
 		builder.push(beg + createcol('Req/min.', 36) + createcol('', 12, 2) + createcol(total, 12, 2));
-		builder.push(beg + createcol('Idle time', 36) + createcol('', 12, 2) + createcol(stats.idle + 'ms', 12, 2));
+		builder.push(beg + createcol('Idle time', 36) + createcol('', 12, 2) + createcol((stats.idle / 1000).floor(1) + 'ms', 12, 2));
 
 		delimiter = delimiter.substring(0, max);
 
