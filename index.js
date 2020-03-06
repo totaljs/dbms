@@ -1685,6 +1685,7 @@ global.DBMS.measure = function(callback, file) {
 			row += '-';
 		}
 
+		delimiter = '|' + delimiter.substring(1, delimiter.length - 1) + '|';
 		row = '|' + row.substring(1, row.length - 2) + '|';
 
 		var builder = [];
