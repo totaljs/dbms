@@ -1687,8 +1687,10 @@ global.DBMS.measure = function(callback, file) {
 
 		row = '|' + row.substring(1, row.length - 2) + '|';
 
-		var builder = ['DBMS: ' + NOW.format('yyyy-MM-dd HH:mm:ss')];
+		var builder = [];
 		builder.push(delimiter);
+		builder.push(beg + createcol(NOW.format('yyyy-MM-dd HH:mm:ss'), 24) + createcol('Req/min.', 12, 2) + createcol('Usage', 12, 2) + createcol('Total', 12, 2));
+		builder.push(row);
 		builder.push(beg + createcol('SELECT', 24) + createcol(output.select.count, 12, 2) + createcol(output.select.usage + '%', 12, 2) + createcol(output.select.usagetotal + '%', 12, 2));
 		builder.push(beg + createcol('INSERT', 24) + createcol(output.insert.count, 12, 2) + createcol(output.insert.usage + '%', 12, 2) + createcol(output.insert.usagetotal + '%', 12, 2));
 		builder.push(beg + createcol('UPDATE', 24) + createcol(output.update.count, 12, 2) + createcol(output.update.usage + '%', 12, 2) + createcol(output.update.usagetotal + '%', 12, 2));
