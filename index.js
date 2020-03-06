@@ -1544,6 +1544,7 @@ global.DBMS.measure = function(callback, file) {
 				stats.q++;
 				stats.qc++;
 				stats.count++;
+				table = table.substring(0, 30);
 				break;
 			case 'udpate':
 				stats.u++;
@@ -1596,11 +1597,16 @@ global.DBMS.measure = function(callback, file) {
 
 		output.reqmin = stats.count;
 		output.count = count;
-		output.create.reqmin = ((stats.c / stats.count) * 100).floor(1);
-		output.select.reqmin = ((stats.r / stats.count) * 100).floor(1);
-		output.delete.reqmin = ((stats.d / stats.count) * 100).floor(1);
-		output.update.reqmin = ((stats.u / stats.count) * 100).floor(1);
-		output.query.reqmin = ((stats.q / stats.count) * 100).floor(1);
+		output.create.usage = ((stats.c / stats.count) * 100).floor(1);
+		output.select.usage = ((stats.r / stats.count) * 100).floor(1);
+		output.delete.usage = ((stats.d / stats.count) * 100).floor(1);
+		output.update.usage = ((stats.u / stats.count) * 100).floor(1);
+		output.query.usage = ((stats.q / stats.count) * 100).floor(1);
+		output.create.reqmin = stats.c;
+		output.select.reqmin = stats.r;
+		output.delete.reqmin = stats.d;
+		output.update.reqmin = stats.u;
+		output.query.reqmin = stats.q;
 
 		for (var i = 0; i < output.create.top.length; i++)
 			output.create.top[i].usage = ((output.create.top[i].count / output.create.count) * 100).floor(1);
