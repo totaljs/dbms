@@ -55,6 +55,7 @@ function select(client, cmd) {
 	var params = [];
 	var q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder, null, null, params);
 
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
@@ -79,6 +80,7 @@ function check(client, cmd) {
 	var params = [];
 	var q = 'SELECT 1 FROM ' + opt.table + WHERE(builder, null, null, params);
 
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
@@ -93,6 +95,7 @@ function query(client, cmd) {
 	var opt = builder.options;
 	var q = cmd.query + WHERE(builder, null, null, cmd.value);
 	builder.db.$debug && builder.db.$debug(q);
+	F.$events.dbms && EMIT('dbms', 'query', cmd.query, opt.db);
 	client.query(q, cmd.value, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -105,6 +108,7 @@ function query(client, cmd) {
 
 function command(client, sql, cmd) {
 	cmd.db.$debug && cmd.db.$debug(sql);
+	F.$events.dbms && EMIT('dbms', 'query', sql, cmd.builder.options.db);
 	client.query(sql, function(err) {
 		cmd.builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, sql);
@@ -123,6 +127,7 @@ function list(client, cmd) {
 	if (cmd.improved && builder.skip) {
 
 		q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
+		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 		builder.db.$debug && builder.db.$debug(q);
 		builder.db.busy = true;
 		client.query(q, params, function(err, response) {
@@ -138,6 +143,7 @@ function list(client, cmd) {
 	} else {
 		q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + query;
 		builder.db.$debug && builder.db.$debug(q);
+		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
 		client.query(q, params, function(err, response) {
 			builder.db.busy = false;
@@ -162,6 +168,7 @@ function list(client, cmd) {
 				builder.db.busy = true;
 				q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
 				builder.db.$debug && builder.db.$debug(q);
+				F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 				client.query(q, params, fn);
 			} else
 				fn(err, null);
@@ -191,6 +198,7 @@ function scalar(client, cmd) {
 
 	q = q + WHERE(builder, false, cmd.scalar === 'group' ? cmd.name : null, params);
 	builder.db.$debug && builder.db.$debug(q);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
@@ -282,6 +290,8 @@ function insert(client, cmd) {
 	var q = 'INSERT INTO ' + opt.table + ' (' + fields.join(',') + ') VALUES(' + values.join(',') + ')' + (builder.$primarykey ? (' RETURNING ' + builder.$primarykey) : '');
 
 	builder.db.$debug && builder.db.$debug(q);
+	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db);
+
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -294,6 +304,7 @@ function insertexists(client, cmd) {
 	var opt = builder.options;
 	var q = 'SELECT 1 as dbmsvalue FROM ' + opt.table + WHERE(builder);
 	builder.db.$debug && builder.db.$debug(q);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 	client.query(q, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -385,6 +396,7 @@ function modify(client, cmd) {
 	var opt = builder.options;
 	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
+	F.$events.dbms && EMIT('dbms', 'update', opt.table, opt.db);
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -406,6 +418,7 @@ function remove(client, cmd) {
 	var params = [];
 	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
+	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);

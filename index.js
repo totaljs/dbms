@@ -1517,6 +1517,125 @@ global.DBMS.template = function(name, fn) {
 	TEMPLATES[name] = fn;
 };
 
+global.DBMS.measure = function(callback, file) {
+
+	if (typeof(callback) === 'boolean') {
+		var tmp = file;
+		file = callback;
+		callback = tmp;
+	}
+
+	var stats = { c: 0, cc: 0, r: 0, rc: 0, u: 0, uc: 0, q: 0, qc: 0, d: 0, dc: 0, count: 0 };
+	var usage = {};
+
+	ON('dbms', function(type, table, db) {
+		switch (type) {
+			case 'insert':
+				stats.c++;
+				stats.cc++;
+				stats.count++;
+				break;
+			case 'select':
+				stats.r++;
+				stats.rc++;
+				stats.count++;
+				break;
+			case 'query':
+				stats.q++;
+				stats.qc++;
+				stats.count++;
+				break;
+			case 'udpate':
+				stats.u++;
+				stats.uc++;
+				stats.count++;
+				break;
+			case 'delete':
+				stats.d++;
+				stats.dc++;
+				stats.count++;
+				break;
+		}
+
+		var key = (db === 'default' ? '' : (db + '/')) + table;
+		if (!usage[key])
+			usage[key] = {};
+
+		if (usage[key][type])
+			usage[key][type]++;
+		else
+			usage[key][type] = 1;
+	});
+
+	ON('service', function() {
+
+		var keys = Object.keys(usage);
+		var output = {};
+
+		output.reqmin = 0;
+		output.count = 0;
+		output.create = { reqmin: 0, count: 0, top: [] };
+		output.update = { reqmin: 0, count: 0, top: [] };
+		output.delete = { reqmin: 0, count: 0, top: [] };
+		output.select = { reqmin: 0, count: 0, top: [] };
+		output.query = { reqmin: 0, count: 0, top: [] };
+
+		var count = 0;
+
+		for (var i = 0; i < keys.length; i++) {
+			var key = keys[i];
+			var obj = usage[key];
+			var keys2 = Object.keys(obj);
+			for (var j = 0; j < keys2.length; j++) {
+				var key2 = keys2[j];
+				output[key2].count += obj[key2];
+				output[key2].top.push({ db: key, count: obj[key2] });
+				count += obj[key2];
+			}
+		}
+
+		output.reqmin = stats.count;
+		output.count = count;
+		output.create.reqmin = ((stats.c / stats.count) * 100).floor(1);
+		output.select.reqmin = ((stats.r / stats.count) * 100).floor(1);
+		output.delete.reqmin = ((stats.d / stats.count) * 100).floor(1);
+		output.update.reqmin = ((stats.u / stats.count) * 100).floor(1);
+		output.query.reqmin = ((stats.q / stats.count) * 100).floor(1);
+
+		for (var i = 0; i < output.create.top.length; i++)
+			output.create.top[i].usage = ((output.create.top[i].count / output.create.count) * 100).floor(1);
+
+		for (var i = 0; i < output.update.top.length; i++)
+			output.update.top[i].usage = ((output.update.top[i].count / output.update.count) * 100).floor(1);
+
+		for (var i = 0; i < output.select.top.length; i++)
+			output.select.top[i].usage = ((output.select.top[i].count / output.select.count) * 100).floor(1);
+
+		for (var i = 0; i < output.delete.top.length; i++)
+			output.delete.top[i].usage = ((output.delete.top[i].count / output.delete.count) * 100).floor(1);
+
+		for (var i = 0; i < output.query.top.length; i++)
+			output.query.top[i].usage = ((output.query.top[i].count / output.query.count) * 100).floor(1);
+
+		output.query.top.quicksort('usage', 'desc');
+		output.select.top.quicksort('usage', 'desc');
+		output.create.top.quicksort('usage', 'desc');
+		output.update.top.quicksort('usage', 'desc');
+		output.delete.top.quicksort('usage', 'desc');
+
+		stats.c = 0;
+		stats.u = 0;
+		stats.r = 0;
+		stats.d = 0;
+		stats.count = 0;
+
+		callback && callback(output);
+		file && require('fs').writeFile(PATH.root('dbms.json'), JSON.stringify(output, null, '    '), NOOP);
+
+	});
+
+};
+
 // Total.js framework
 if (global.F) {
 	global.F.database = function(err) {
