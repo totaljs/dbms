@@ -1692,14 +1692,15 @@ global.DBMS.measure = function(callback, file) {
 		builder.push(delimiter);
 		builder.push(beg + createcol(NOW.format('yyyy-MM-dd HH:mm:ss'), 24) + createcol('Req/min.', 12, 2) + createcol('Usage', 12, 2) + createcol('Total', 12, 2));
 		builder.push(row);
-		builder.push(beg + createcol('SELECT', 24) + createcol(output.select.count, 12, 2) + createcol(output.select.usage + '%', 12, 2) + createcol(output.select.usagetotal + '%', 12, 2));
-		builder.push(beg + createcol('INSERT', 24) + createcol(output.insert.count, 12, 2) + createcol(output.insert.usage + '%', 12, 2) + createcol(output.insert.usagetotal + '%', 12, 2));
-		builder.push(beg + createcol('UPDATE', 24) + createcol(output.update.count, 12, 2) + createcol(output.update.usage + '%', 12, 2) + createcol(output.update.usagetotal + '%', 12, 2));
-		builder.push(beg + createcol('DELETE', 24) + createcol(output['delete'].count, 12, 2) + createcol(output['delete'].usage + '%', 12, 2) + createcol(output['delete'].usagetotal + '%', 12, 2));
-		builder.push(beg + createcol('QUERY', 24) + createcol(output.query.count, 12, 2) + createcol(output.query.usage + '%', 12, 2) + createcol(output.query.usagetotal + '%', 12, 2));
+		builder.push(beg + createcol('SELECT', 24) + createcol(output.select.reqmin, 12, 2) + createcol(output.select.usage + '%', 12, 2) + createcol(output.select.usagetotal + '%', 12, 2));
+		builder.push(beg + createcol('INSERT', 24) + createcol(output.insert.reqmin, 12, 2) + createcol(output.insert.usage + '%', 12, 2) + createcol(output.insert.usagetotal + '%', 12, 2));
+		builder.push(beg + createcol('UPDATE', 24) + createcol(output.update.reqmin, 12, 2) + createcol(output.update.usage + '%', 12, 2) + createcol(output.update.usagetotal + '%', 12, 2));
+		builder.push(beg + createcol('DELETE', 24) + createcol(output['delete'].reqmin, 12, 2) + createcol(output['delete'].usage + '%', 12, 2) + createcol(output['delete'].usagetotal + '%', 12, 2));
+		builder.push(beg + createcol('QUERY', 24) + createcol(output.query.reqmin, 12, 2) + createcol(output.query.usage + '%', 12, 2) + createcol(output.query.usagetotal + '%', 12, 2));
 		builder.push(row);
 		builder.push(beg + createcol('Req/min.', 36) + createcol('', 12, 2) + createcol(total, 12, 2));
 		builder.push(beg + createcol('Idle time', 36) + createcol('', 12, 2) + createcol((stats.idle / 1000).floor(1) + 's', 12, 2));
+		builder.push(row);
 
 		delimiter = delimiter.substring(0, max);
 
@@ -1712,6 +1713,7 @@ global.DBMS.measure = function(callback, file) {
 				var tmp = output.select.top[i];
 				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
 			}
+			builder.push(row);
 		}
 
 		if (output.insert.top.length) {
@@ -1719,11 +1721,11 @@ global.DBMS.measure = function(callback, file) {
 			builder.push(delimiter);
 			builder.push(beg + createcol('INSERT', 36) + createcol(output.insert.count, 12, 2) + createcol(output.insert.usage + '%', 12, 2));
 			builder.push(row);
-
 			for (var i = 0; i < output.insert.top.length; i++) {
 				var tmp = output.insert.top[i];
 				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
 			}
+			builder.push(row);
 		}
 
 		if (output.update.top.length) {
@@ -1731,11 +1733,11 @@ global.DBMS.measure = function(callback, file) {
 			builder.push(delimiter);
 			builder.push(beg + createcol('UPDATE', 36) + createcol(output.update.count, 12, 2) + createcol(output.update.usage + '%', 12, 2));
 			builder.push(row);
-
 			for (var i = 0; i < output.update.top.length; i++) {
 				var tmp = output.update.top[i];
 				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
 			}
+			builder.push(row);
 		}
 
 		if (output['delete'].top.length) {
@@ -1743,11 +1745,11 @@ global.DBMS.measure = function(callback, file) {
 			builder.push(delimiter);
 			builder.push(beg + createcol('DELETE', 36) + createcol(output['delete'].count, 12, 2) + createcol(output['delete'].usage + '%', 12, 2));
 			builder.push(row);
-
 			for (var i = 0; i < output['delete'].top.length; i++) {
 				var tmp = output['delete'].top[i];
 				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
 			}
+			builder.push(row);
 		}
 
 		if (output.query.top.length) {
@@ -1755,11 +1757,11 @@ global.DBMS.measure = function(callback, file) {
 			builder.push(delimiter);
 			builder.push(beg + createcol('QUERY', 36) + createcol(output.query.count, 12, 2) + createcol(output.query.usage + '%', 12, 2));
 			builder.push(row);
-
 			for (var i = 0; i < output.query.top.length; i++) {
 				var tmp = output.query.top[i];
 				builder.push(beg + createcol(tmp.table, 36) + createcol(tmp.count, 12, 2) + createcol(tmp.usage + '%', 12, 2));
 			}
+			builder.push(row);
 		}
 
 		builder.push('');
