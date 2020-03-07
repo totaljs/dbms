@@ -1765,6 +1765,17 @@ global.DBMS.measure = function(callback, file) {
 		}
 
 		builder.push('');
+
+		builder.push(delimiter);
+		builder.push(beg + createcol('COUNTER', 36) + createcol('Total', 24, 2));
+		builder.push(row);
+		builder.push(beg + createcol('SELECT', 36) + createcol(output.select.count, 24, 2));
+		builder.push(beg + createcol('INSERT', 36) + createcol(output.insert.count, 24, 2));
+		builder.push(beg + createcol('UPDATE', 36) + createcol(output.update.count, 24, 2));
+		builder.push(beg + createcol('DELETE', 36) + createcol(output.delete.count, 24, 2));
+		builder.push(beg + createcol('QUERY', 36) + createcol(output.query.count, 24, 2));
+		builder.push(row);
+
 		require('fs').writeFile(PATH.root('dbms.txt'), builder.join('\n'), NOOP);
 
 	});
