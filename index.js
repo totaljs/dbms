@@ -1525,7 +1525,7 @@ global.DBMS.measure = function(callback, file) {
 		callback = tmp;
 	}
 
-	var stats = { insert: 0, inserttotal: 0, select: 0, selecttotal: 0, update: 0, updatetotal: 0, query: 0, querytotal: 0, delete: 0, deletetotal: 0, count: 0, total: 0, ticks: 0 };
+	var stats = { insert: 0, inserttotal: 0, insertidle: 0, select: 0, selecttotal: 0, selectidle: 0, update: 0, updatetotal: 0, updateidle: 0, query: 0, querytotal: 0, queryidle: 0, delete: 0, deletetotal: 0, deleteidle: 0, count: 0, total: 0, ticks: 0 };
 	var usage = {};
 
 	ON('dbms', function(type, table, db) {
@@ -1533,7 +1533,6 @@ global.DBMS.measure = function(callback, file) {
 		var now = Date.now();
 
 		stats.idle = stats.ticks ? (now - stats.ticks) : null;
-		stats.ticks = now;
 
 		switch (type) {
 			case 'insert':
@@ -1541,18 +1540,24 @@ global.DBMS.measure = function(callback, file) {
 				stats.inserttotal++;
 				stats.count++;
 				stats.total++;
+				stats.insertidle = stats.insertticks ? (now - stats.insertticks) : null;
+				stats.insertticks = now;
 				break;
 			case 'select':
 				stats.select++;
 				stats.selecttotal++;
 				stats.count++;
 				stats.total++;
+				stats.selectidle = stats.selectticks ? (now - stats.selectticks) : null;
+				stats.selectticks = now;
 				break;
 			case 'query':
 				stats.query++;
 				stats.querytotal++;
 				stats.count++;
 				stats.total++;
+				stats.queryidle = stats.queryticks ? (now - stats.queryticks) : null;
+				stats.queryticks = now;
 				table = table.substring(0, 30);
 				break;
 			case 'udpate':
@@ -1560,14 +1565,20 @@ global.DBMS.measure = function(callback, file) {
 				stats.updatetotal++;
 				stats.count++;
 				stats.total++;
+				stats.updateidle = stats.updateticks ? (now - stats.updateticks) : null;
+				stats.updateticks = now;
 				break;
 			case 'delete':
 				stats['delete']++;
 				stats.deletetotal++;
 				stats.count++;
 				stats.total++;
+				stats.deleteidle = stats.deleteticks ? (now - stats.deleteticks) : null;
+				stats.deleteticks = now;
 				break;
 		}
+
+		stats.ticks = now;
 
 		var key = (db === 'default' ? '' : (db + '/')) + table;
 		if (!usage[key])
