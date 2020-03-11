@@ -802,36 +802,38 @@ QB.$callback = function(err, value, count) {
 		self.db.$lasterror = err;
 	} else {
 
-		self.db.$outputall[opt.table] = self.db.$lastoutput = value;
+		if (!self.$joinmeta) {
+			self.db.$outputall[opt.table] = self.db.$lastoutput = value;
 
-		if (opt.assign) {
-			if (self.db.$output == null)
-				self.db.$output = {};
-			self.db.$outputall[opt.assign] = self.db.$output[opt.assign] = value;
-		} else
-			self.db.$output = value;
+			if (opt.assign) {
+				if (self.db.$output == null)
+					self.db.$output = {};
+				self.db.$outputall[opt.assign] = self.db.$output[opt.assign] = value;
+			} else
+				self.db.$output = value;
 
-		var ok = true;
-		if (opt.validate) {
-			if (opt.validatereverse) {
-				if (value instanceof Array) {
-					if (value.length) {
+			var ok = true;
+			if (opt.validate) {
+				if (opt.validatereverse) {
+					if (value instanceof Array) {
+						if (value.length) {
+							self.db.$errors.push(opt.validate);
+							ok = false;
+						}
+					} else if (value) {
 						self.db.$errors.push(opt.validate);
 						ok = false;
 					}
-				} else if (value) {
-					self.db.$errors.push(opt.validate);
-					ok = false;
-				}
-			} else {
-				if (value instanceof Array) {
-					if (!value.length) {
+				} else {
+					if (value instanceof Array) {
+						if (!value.length) {
+							self.db.$errors.push(opt.validate);
+							ok = false;
+						}
+					} else if (!value) {
 						self.db.$errors.push(opt.validate);
 						ok = false;
 					}
-				} else if (!value) {
-					self.db.$errors.push(opt.validate);
-					ok = false;
 				}
 			}
 		}
@@ -2269,9 +2271,8 @@ DP._joins = function(response, builder, count) {
 		}
 
 		var first = join.options.first;
-
 		join.options.first = false;
-		join.options.take = 10000; // max. limit
+		join.options.take = join.options.take || 10000; // max. limit
 		join.in(meta.a, arr);
 		join.callback(function(err, data) {
 
@@ -2286,8 +2287,9 @@ DP._joins = function(response, builder, count) {
 					var row = response[i];
 					row[meta.field] = join.db._findItems(data, meta.a, row[meta.b], first);
 				}
-			} else if (response)
+			} else if (response) {
 				response[meta.field] = join.db._findItems(data, meta.a, response[meta.b], first);
+			}
 
 			next();
 		});
