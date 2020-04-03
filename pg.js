@@ -93,6 +93,10 @@ function check(client, cmd) {
 function query(client, cmd) {
 	var builder = cmd.builder;
 	var opt = builder.options;
+
+	if (!cmd.value && builder.options.params)
+		cmd.value = [];
+
 	var q = cmd.query + WHERE(builder, null, null, cmd.value);
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'query', cmd.query, opt.db);
