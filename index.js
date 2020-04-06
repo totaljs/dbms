@@ -65,7 +65,31 @@ DP.blob = function(table) {
 
 	return {
 		write: function(stream, filename, callback) {
-			driver.blob_write(conn, stream, filename, callback, cache);
+
+			if (stream instanceof Buffer) {
+
+				if (typeof(filename) === 'function') {
+					callback = filename;
+					filename = null;
+				}
+
+				// Creates a temporary file
+				var tmpfile = PATH.temp(Math.random().toString(16).substring(3) + '.dbms');
+
+				Fs.writeFile(tmpfile, stream, function(err) {
+
+					if (err) {
+						callback(err);
+						return;
+					}
+
+					stream = Fs.createReadStream(tmpfile);
+					driver.blob_write(conn, stream, filename, callback, cache);
+					stream.on('close', () => Fs.unlink(tmpfile, NOOP));
+				});
+
+			} else
+				driver.blob_write(conn, stream, filename, callback, cache);
 		},
 		read: function(id, callback) {
 			driver.blob_read(conn, id, callback, cache);
