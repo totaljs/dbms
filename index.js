@@ -115,7 +115,7 @@ DP.debug = function() {
 	return this;
 };
 
-DP.aud = DP.audit = function() {
+DP.log = DP.audit = function() {
 	var arg = [];
 	for (var i = 0; i < arguments.length; i++)
 		arg.push(arguments[i]);
