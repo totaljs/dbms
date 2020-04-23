@@ -223,7 +223,8 @@ DP.next = function() {
 
 		if (cmd.type === 'audit') {
 			auditwriter && auditwriter.apply(self, cmd.arg);
-			setImmediate(self.$next);
+			self.$op && clearImmediate(self.$op);
+			self.$op = setImmediate(self.$next);
 		} else if (cmd.type === 'task') {
 			cmd.value.call(self, self.$outputall, self.$lastoutput);
 			if (self.$errors.length) {
@@ -233,8 +234,10 @@ DP.next = function() {
 					self.$callback = null;
 				}
 				self.forcekill();
-			} else
-				setImmediate(self.$next);
+			} else {
+				self.$op && clearImmediate(self.$op);
+				self.$op = setImmediate(self.$next);
+			}
 		} else if (cmd.type === 'validate') {
 
 			var stop = false;
@@ -842,10 +845,15 @@ QB.$callback = function(err, value, count) {
 			self.db.$outputall[opt.table] = self.db.$lastoutput = value;
 
 			if (opt.assign) {
-				if (self.db.$output == null)
-					self.db.$output = {};
-				self.db.$outputall[opt.assign] = self.db.$output[opt.assign] = value;
-			} else
+
+				if (!opt.nobind) {
+					if (self.db.$output == null)
+						self.db.$output = {};
+					self.db.$output[opt.assign] = value;
+				}
+
+				self.db.$outputall[opt.assign] = value;
+			} else if (!opt.nobind)
 				self.db.$output = value;
 
 			var ok = true;
@@ -890,6 +898,11 @@ QB.$callback = function(err, value, count) {
 		self.db.$op && clearImmediate(self.db.$op);
 		self.db.$op = setImmediate(self.db.$next);
 	}
+};
+
+QB.nobind = function() {
+	this.options.nobind = true;
+	return this;
 };
 
 QB.make = function(fn) {

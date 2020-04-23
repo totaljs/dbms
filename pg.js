@@ -509,8 +509,6 @@ exports.run = function(opt, self, cmd, repeated) {
 
 	conn.driver.connect(function(err, client) {
 
-	console.log('OK');
-
 		if (err) {
 
 			self.busy = false;
