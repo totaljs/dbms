@@ -10,6 +10,7 @@ const REG_FIELDS_CLEANER = /"|`|\||'|\s/g;
 
 // A temporary cache for fields (it's cleaning each 10 minutes)
 var FIELDS = {};
+var auditwriter;
 
 function promise(fn) {
 	var self = this;
@@ -114,6 +115,14 @@ DP.debug = function() {
 	return this;
 };
 
+DP.aud = DP.audit = function() {
+	var arg = [];
+	for (var i = 0; i < arguments.length; i++)
+		arg.push(arguments[i]);
+	this.$commands.push({ type: 'audit', arg: arg });
+	return this;
+};
+
 DP.invalid = function(name, err) {
 	var self = this;
 	self.$errors.push(name, err);
@@ -212,7 +221,10 @@ DP.next = function() {
 			return;
 		}
 
-		if (cmd.type === 'task') {
+		if (cmd.type === 'audit') {
+			auditwriter && auditwriter.apply(self, cmd.arg);
+			setImmediate(self.$next);
+		} else if (cmd.type === 'task') {
 			cmd.value.call(self, self.$outputall, self.$lastoutput);
 			if (self.$errors.length) {
 				self.$commands = null;
@@ -1530,6 +1542,10 @@ global.DBMS = function(err) {
 		err.call(db, db);
 	} else
 		return new exports.DBMS(err);
+};
+
+global.DBMS.audit = function(fn) {
+	auditwriter = fn;
 };
 
 global.DBMS.logger = function(fn) {
