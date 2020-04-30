@@ -336,6 +336,9 @@ function modify(client, cmd) {
 		if (val === undefined || BLACKLIST[key])
 			continue;
 
+		if (cmd.builder.options.equal && cmd.builder.options.equal.indexOf(key) !== -1)
+			continue;
+
 		if (cmd.builder.options.fields && cmd.builder.options.fields.length) {
 			var skip = true;
 			for (var j = 0; j < cmd.builder.options.fields.length; j++) {
@@ -398,6 +401,12 @@ function modify(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
+
+	if (opt.equal) {
+		for (var i = 0; i < opt.equal; i++)
+			cmd.builder.where(opt.equal[i], builder.value[opt.equal[i]]);
+	}
+
 	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'update', opt.table, opt.db);

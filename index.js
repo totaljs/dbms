@@ -1085,6 +1085,23 @@ QB.skip = function(value) {
 	return self;
 };
 
+QB.equal = function(val, model) {
+	var self = this;
+	var keys = val.split(',');
+
+	if (!model)
+		self.options.equal = [];
+
+	for (var i = 0; i < keys.length; i++) {
+		var k = keys[i][0] === ' ' ? keys[i].substring(1) : keys[i];
+		if (model)
+			self.where(k, model[k]);
+		else
+			self.options.equal.push(k);
+	}
+	return self;
+};
+
 QB.limit = function(value) {
 	var self = this;
 	self.options.take = value;
