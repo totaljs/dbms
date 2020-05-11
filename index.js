@@ -1058,6 +1058,12 @@ QB.search = function(name, value, compare) {
 	return self;
 };
 
+QB.searchfull = function(value) {
+	var self = this;
+	self.$commands.push({ type: 'searchfull', value: value });
+	return self;
+};
+
 QB.searchall = function(name, value) {
 	var self = this;
 	if (!(value instanceof Array))

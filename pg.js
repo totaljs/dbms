@@ -702,6 +702,12 @@ function WHERE(builder, scalar, group, params) {
 				condition.push(cmd.name + ' ILIKE ' + tmp);
 				break;
 
+			case 'searchfull':
+				tmp = ESCAPE('%' + cmd.value.toLowerCase().replace(/y/g, 'i') + '%');
+				opuse && condition.length && condition.push(op);
+				condition.push('REPLACE(LOWER(to_tsvector(' + builder.options.table + '::text)::text), \'y\', \'i\') ILIKE ' + tmp);
+				break;
+
 			case 'searchall':
 				tmp = '';
 				for (var j = 0; j < cmd.value.length; j++)
