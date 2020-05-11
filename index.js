@@ -136,6 +136,16 @@ DP.kill = function(reason) {
 	return self;
 };
 
+DP.done = function($, callback, param) {
+	this.$callback = function(err, response) {
+		if (err)
+			$.invalid(err);
+		else
+			callback(response, param);
+	};
+	return this;
+};
+
 DP.callback = function(fn) {
 	var self = this;
 	self.$callback = fn;
@@ -231,10 +241,17 @@ DP.next = function() {
 			cmd.value.call(self, self.$outputall, self.$lastoutput);
 			if (self.$errors.length) {
 				self.$commands = null;
+
 				if (self.$callback) {
 					self.$callback(self.$errors, null);
 					self.$callback = null;
 				}
+
+				if (self.$callbackno) {
+					self.$callbackno(self.$errors, self.$callbacknoparam);
+					self.$callbacknoparam = self.$callbackno = null;
+				}
+
 				self.forcekill();
 			} else {
 				self.$op && clearImmediate(self.$op);
@@ -289,10 +306,17 @@ DP.next = function() {
 
 			if (stop) {
 				self.$commands = null;
+
 				if (self.$callback) {
 					self.$callback(self.$errors, null);
 					self.$callback = null;
 				}
+
+				if (self.$callbackno) {
+					self.$callbackno(self.$errors, self.$callbacknoparam);
+					self.$callbacknoparam = self.$callbackno = null;
+				}
+
 				self.forcekill();
 			} else
 				setImmediate(self.$next);
@@ -315,7 +339,6 @@ DP.next = function() {
 		}
 
 		self.prev = cmd;
-
 	} else {
 
 		self.forcekill();
@@ -328,10 +351,7 @@ DP.next = function() {
 
 		if (err) {
 			if (self.$callbackno) {
-				if (typeof(self.$callbackno) === 'function')
-					self.$callbackno(err, self.$callbacknoparam);
-				else if (self.$callbackno.invalid) // maybe SchemaOptions/Controller
-					self.$callbackno.invalid(err);
+				self.$callbackno(err, self.$callbacknoparam);
 				self.$callbacknoparam = self.$callbackno = null;
 			}
 		} else {
@@ -843,10 +863,8 @@ QB.$callback = function(err, value, count) {
 		self.db.$lastoutput = null;
 		self.db.$outputall[opt.table] = null;
 		if (opt.callbackno) {
-			if (typeof(opt.callbackno) === 'function')
-				opt.callbackno(err);
-			else if (opt.callbackno.invalid) // SchemaOptions/Controller
-				opt.callbackno.invalid(err);
+			opt.callbackno(err, opt.callbacknoparam);
+			opt.callbacknoparam = opt.callbackno = null;
 		}
 		self.db.$lasterror = err;
 	} else {
@@ -897,10 +915,8 @@ QB.$callback = function(err, value, count) {
 		if (ok)
 			opt.callbackok && opt.callbackok(value, opt.callbackokparam);
 		else if (opt.callbackno) {
-			if (typeof(opt.callbackno) === 'function')
-				opt.callbackno(opt.validate, opt.callbacknoparam);
-			else if (opt.callbackno.invalid)
-				opt.callbackno.invalid(opt.validate);
+			opt.callbackno(opt.validate, opt.callbacknoparam);
+			opt.callbackno = opt.callbacknoparam = null;
 		}
 
 	}
@@ -1161,6 +1177,15 @@ QB.callback = function(callback) {
 
 	self.options.callback = callback;
 	return self;
+};
+
+QB.done = function($, callback, param) {
+	return this.callback(function(err, response) {
+		if (err)
+			$.invalid(err);
+		else
+			callback(response, param);
+	});
 };
 
 QB.debug = function() {
@@ -1460,21 +1485,74 @@ QB.copy = function(val, existing) {
 	var keys = Object.keys(val);
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
-		if (key !== 'dbms' && (!existing || self.value[key] !== undefined))
+		if (key !== 'dbms' && key !== self.$ormprimary && (!existing || self.value[key] !== undefined))
 			self.value[key] = val[key];
 	}
 	return self;
 };
 
+// ORM
+QB.modified = function(val) {
+	var self = this;
+	var keys = Object.keys(self.value);
+	var data;
+
+	for (var i = 0; i < keys.length; i++) {
+
+		var key = keys[i];
+		var a = val[key];
+
+		if (a === undefined)
+			continue;
+
+		var b = self.value[key];
+		if (a === b)
+			continue;
+
+		if ((a instanceof Date) && (b instanceof Date)) {
+			if (a.getTime() === b.getTime())
+				continue;
+		} if (a && b && a instanceof Object && b instanceof Object) {
+			// array or object
+			if (JSON.stringify(a) === JSON.stringify(b))
+				continue;
+		}
+
+		if (!data)
+			data = {};
+
+		data[key] = a;
+	}
+
+	if (data) {
+		data[self.$ormprimary] = self.value[self.$ormprimary];
+		self.value = data;
+	} else
+		self.value = null;
+
+	return !!data;
+};
+
 QB.replace = function(val) {
 	var self = this;
+	var id = self.$ormprimary ? self.value[self.$ormprimary] : null;
 	self.value = val;
+
+	if (self.$ormprimary)
+		self.value[self.$ormprimary] = id;
+
 	return self;
 };
 
 // ORM
 QB.save = function(callback) {
 	var self = this;
+
+	if (!self.value) {
+		callback(null, 0);
+		return;
+	}
+
 	var isnew = false;
 
 	if (!self.db || self.db.closed) {
@@ -1500,7 +1578,7 @@ QB.save = function(callback) {
 
 	self.options.callback = callback ? callback : null;
 
-	// "next" command is performend when the DBMS instance is new
+	// "next" command is performed when the DBMS instance is new
 	if (self.db.$skip || isnew) {
 		self.db.$skip = false;
 		self.db.$op && clearImmediate(self.db.$op);
