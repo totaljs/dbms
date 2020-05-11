@@ -142,15 +142,17 @@ DP.callback = function(fn) {
 	return self;
 };
 
-DP.data = function(fn) {
+DP.data = function(fn, param) {
 	var self = this;
 	self.$callbackok = fn;
+	self.$callbackokparam = param;
 	return self;
 };
 
-DP.fail = function(fn) {
+DP.fail = function(fn, param) {
 	var self = this;
 	self.$callbackno = fn;
+	self.$callbacknoparam = param;
 	return self;
 };
 
@@ -326,13 +328,16 @@ DP.next = function() {
 
 		if (err) {
 			if (self.$callbackno) {
-				self.$callbackno(err);
-				self.$callbackno = null;
+				if (typeof(self.$callbackno) === 'function')
+					self.$callbackno(err, self.$callbacknoparam);
+				else if (self.$callbackno.invalid) // maybe SchemaOptions/Controller
+					self.$callbackno.invalid(err);
+				self.$callbacknoparam = self.$callbackno = null;
 			}
 		} else {
 			if (self.$callbackok) {
-				self.$callbackok(self.$output);
-				self.$callbackok = null;
+				self.$callbackok(self.$output, self.$callbackokparam);
+				self.$callbackokparam = self.$callbackok = null;
 			}
 		}
 	}
@@ -837,7 +842,12 @@ QB.$callback = function(err, value, count) {
 		self.db.$errors.push(err);
 		self.db.$lastoutput = null;
 		self.db.$outputall[opt.table] = null;
-		opt.callbackno && opt.callbackno(err);
+		if (opt.callbackno) {
+			if (typeof(opt.callbackno) === 'function')
+				opt.callbackno(err);
+			else if (opt.callbackno.invalid) // SchemaOptions/Controller
+				opt.callbackno.invalid(err);
+		}
 		self.db.$lasterror = err;
 	} else {
 
@@ -885,14 +895,18 @@ QB.$callback = function(err, value, count) {
 		opt.callback && opt.callback(ok ? null : opt.validate, value, count);
 
 		if (ok)
-			opt.callbackok && opt.callbackok(value, count);
-		else
-			opt.callbackno && opt.callbackno(opt.validate);
+			opt.callbackok && opt.callbackok(value, opt.callbackokparam);
+		else if (opt.callbackno) {
+			if (typeof(opt.callbackno) === 'function')
+				opt.callbackno(opt.validate, opt.callbacknoparam);
+			else if (opt.callbackno.invalid)
+				opt.callbackno.invalid(opt.validate);
+		}
 
 	}
 
 	if (self.$orm)
-		opt.callbackok = opt.callbackno = opt.callback = undefined;
+		opt.callbacknoparam = opt.callbackokparam = opt.callbackok = opt.callbackno = opt.callback = undefined;
 
 	if (!self.busy) {
 		self.db.$op && clearImmediate(self.db.$op);
@@ -1154,26 +1168,32 @@ QB.debug = function() {
 	return this;
 };
 
-QB.data = function(fn) {
+QB.data = function(fn, param) {
 	var self = this;
 
 	// Because of JOINS
-	if (self.$joinmeta && self.$joinmeta.owner)
+	if (self.$joinmeta && self.$joinmeta.owner) {
 		self.$joinmeta.owner.options.callbackok = fn;
-	else
+		self.$joinmeta.owner.options.callbackokparam = param;
+	} else {
 		self.options.callbackok = fn;
+		self.options.callbackokparam = param;
+	}
 
 	return self;
 };
 
-QB.fail = function(fn) {
+QB.fail = function(fn, param) {
 	var self = this;
 
 	// Because of JOINS
-	if (self.$joinmeta && self.$joinmeta.owner)
+	if (self.$joinmeta && self.$joinmeta.owner) {
 		self.$joinmeta.owner.options.callbackno = fn;
-	else
+		self.$joinmeta.owner.options.callbacknoparam = param;
+	} else {
 		self.options.callbackno = fn;
+		self.options.callbacknoparam = param;
+	}
 
 	return self;
 };
@@ -1435,12 +1455,12 @@ QB.continue = function() {
 };
 
 // ORM
-QB.copy = function(val) {
+QB.copy = function(val, existing) {
 	var self = this;
 	var keys = Object.keys(val);
 	for (var i = 0; i < keys.length; i++) {
 		var key = keys[i];
-		if (key !== 'dbms')
+		if (key !== 'dbms' && (!existing || self.value[key] !== undefined))
 			self.value[key] = val[key];
 	}
 	return self;
