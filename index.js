@@ -2477,6 +2477,17 @@ DP._joins = function(response, builder, count) {
 		join.callback(function(err, data) {
 
 			if (err || !data.length) {
+
+				if (!first) {
+					if (response instanceof Array) {
+						for (var i = 0; i < response.length; i++) {
+							var row = response[i];
+							row[meta.field] = [];
+						}
+					} else
+						response[meta.field] = [];
+				}
+
 				builder.$callback(err, response, count);
 				builder.$joins.length = null;
 				return;
@@ -2487,9 +2498,8 @@ DP._joins = function(response, builder, count) {
 					var row = response[i];
 					row[meta.field] = join.db._findItems(data, meta.a, row[meta.b], first);
 				}
-			} else if (response) {
+			} else if (response)
 				response[meta.field] = join.db._findItems(data, meta.a, response[meta.b], first);
-			}
 
 			next();
 		});
