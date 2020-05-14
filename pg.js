@@ -8,6 +8,9 @@ const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
 const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1 };
 
+// Convertor: Numeric to number
+Database.types.setTypeParser(1700, val => val == null ? null : +val);
+
 var ESCAPE = global.PG_ESCAPE = function(value) {
 
 	if (value == null)
