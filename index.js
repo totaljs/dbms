@@ -2476,8 +2476,14 @@ DP._joins = function(response, builder, count) {
 		join.in(meta.a, arr);
 		join.callback(function(err, data) {
 
-			if (err || !data.length) {
+			if (err) {
+				builder.$callback(err, null, count);
+				builder.$joins.length = null;
+				next = null;
+				return;
+			}
 
+			if (!data.length) {
 				if (!first) {
 					if (response instanceof Array) {
 						for (var i = 0; i < response.length; i++) {
@@ -2487,13 +2493,7 @@ DP._joins = function(response, builder, count) {
 					} else
 						response[meta.field] = [];
 				}
-
-				builder.$callback(err, response, count);
-				builder.$joins.length = null;
-				return;
-			}
-
-			if (response instanceof Array) {
+			} else  if (response instanceof Array) {
 				for (var i = 0; i < response.length; i++) {
 					var row = response[i];
 					row[meta.field] = join.db._findItems(data, meta.a, row[meta.b], first);
