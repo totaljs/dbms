@@ -406,7 +406,7 @@ function modify(client, cmd) {
 	var opt = builder.options;
 
 	if (opt.equal) {
-		for (var i = 0; i < opt.equal; i++)
+		for (var i = 0; i < opt.equal.length; i++)
 			cmd.builder.where(opt.equal[i], builder.value[opt.equal[i]]);
 	}
 
