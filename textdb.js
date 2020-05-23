@@ -60,39 +60,60 @@ function select(client, cmd) {
 }
 
 function check(client, cmd) {
-
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var params = [];
-	var q = 'SELECT 1 FROM ' + opt.table + WHERE(builder, null, null, params);
+	var filter = WHERE(builder);
+	var data = {};
 
+	data.command = 'find2';
+	data.builder = {};
+	data.builder.filter = filter.filter;
+	data.builder.filterarg = { arg: filter.arg };
+	data.builder.take = 1;
+
+	if (!cmd.value && builder.options.params)
+		cmd.value = [];
+
+	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
-	builder.db.$debug && builder.db.$debug(q);
-	client.query(q, params, function(err, response) {
+
+	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.db.busy = false;
-		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
-		var is = response && response.rows ? response.rows[0] != null : false;
-		builder.$callback(err, is);
+		var is = false;
+		if (response) {
+			response = response.parseJSON(true);
+			if (response && response.response.length)
+				is = true;
+		}
+		builder.$callback(err, is, response ? response.scanned : 0);
 	});
 }
 
 function query(client, cmd) {
 	var builder = cmd.builder;
 	var opt = builder.options;
+	var filter = WHERE(builder);
+	var data = {};
+
+	data.command = 'find';
+	data.builder = {};
+	data.builder.filter = cmd.query + (filter.filter ? ('&&' + filter.filter) : '');
+	data.builder.filterarg = cmd.value || {};
+	data.builder.filterarg.arg = filter.arg;
 
 	if (!cmd.value && builder.options.params)
 		cmd.value = [];
 
-	var q = cmd.query + WHERE(builder, null, null, cmd.value);
-	builder.db.$debug && builder.db.$debug(q);
-	F.$events.dbms && EMIT('dbms', 'query', cmd.query, opt.db);
-	client.query(q, cmd.value, function(err, response) {
+	builder.db.$debug && builder.db.$debug(data);
+	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db);
+
+	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.db.busy = false;
-		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
-		var rows = response ? response.rows : EMPTYARRAY;
-		if (opt.first)
-			rows = rows.length ? rows[0] : null;
-		builder.$callback(err, rows);
+		if (response)
+			response = response.parseJSON(true);
+		builder.$callback(err, response ? response.response : EMPTYARRAY, response);
 	});
 }
 
@@ -255,12 +276,10 @@ function insertexists(client, cmd) {
 
 		var rows = EMPTYARRAY;
 
-		if (response) {
+		if (response)
 			response = response.parseJSON(true);
-			rows = response.response;
-		}
 
-		var rows = response ? response.rows : EMPTYARRAY;
+		var rows = response ? response.response : EMPTYARRAY;
 		if (rows.length)
 			builder.$callback(err, 0);
 		else
