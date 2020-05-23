@@ -1665,6 +1665,9 @@ exports.init = function(name, connection, onerror) {
 		case 'mongo:':
 			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database, onerror: onerror, type: 'mongodb' };
 			break;
+		case 'textdb:':
+			CONN[name] = { id: name, db: 'textdb', url: (connection + '/databases/').replace('textdb:', 'http:'), onerror: onerror, type: 'textdb' };
+			break;
 	}
 
 	return exports;
