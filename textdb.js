@@ -34,15 +34,20 @@ function select(client, cmd) {
 	// builder.db.$debug && builder.db.$debug(q);
 
 	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
-		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.db.busy = false;
 
 		var rows = EMPTYARRAY;
 
-		if (response) {
+		if (response)
 			response = response.parseJSON(true);
+
+		if (response instanceof Array) {
+			err = response[0].error;
+			response = null;
+		} else if (response)
 			rows = response.response;
-		}
+
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 
 		if (opt.first)
 			rows = rows[0] || null;
@@ -78,14 +83,20 @@ function check(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
 	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
-		err && client.$opt.onerror && client.$opt.onerror(err, data);
+
 		builder.db.busy = false;
 		var is = false;
-		if (response) {
+
+		if (response)
 			response = response.parseJSON(true);
-			if (response && response.response.length)
-				is = true;
-		}
+
+		if (response instanceof Array) {
+			err = response[0].error;
+			response = null;
+		} else if (response && response.response.length)
+			is = true;
+
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.$callback(err, is, response ? response.scanned : 0);
 	});
 }
@@ -109,10 +120,17 @@ function query(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db);
 
 	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
-		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.db.busy = false;
+
 		if (response)
 			response = response.parseJSON(true);
+
+		if (response instanceof Array) {
+			err = response[0].error;
+			response = null;
+		}
+
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.$callback(err, response ? response.response : EMPTYARRAY, response);
 	});
 }
@@ -159,17 +177,23 @@ function scalar(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
 	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
-		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.db.busy = false;
 
 		var value;
 
-		if (response) {
+		if (response)
 			response = response.parseJSON(true);
+
+		if (response instanceof Array) {
+			err = response[0].error;
+			response = null;
+		} else if (response) {
 			value = response.scalararg.value;
 			if (cmd.scalar === 'avg')
 				value = (value / response.counter).fixed(3);
 		}
+
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.$callback(err, value, response ? response.scanned : 0);
 	});
 }
@@ -246,10 +270,16 @@ function insert(client, cmd) {
 	data.builder.payload = doc;
 
 	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
-		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.db.busy = false;
 		if (response)
 			response = response.parseJSON(true);
+
+		if (response instanceof Array) {
+			err = response[0].error;
+			response = null;
+		}
+
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.$callback(err, err == null ? response.count : 0);
 	});
 }
@@ -271,7 +301,6 @@ function insertexists(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, data);
 
 	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
-		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.db.busy = false;
 
 		var rows = EMPTYARRAY;
@@ -279,6 +308,12 @@ function insertexists(client, cmd) {
 		if (response)
 			response = response.parseJSON(true);
 
+		if (response instanceof Array) {
+			err = response[0].error;
+			response = null;
+		}
+
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		var rows = response ? response.response : EMPTYARRAY;
 		if (rows.length)
 			builder.$callback(err, 0);
@@ -392,16 +427,20 @@ function modify(client, cmd) {
 
 	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
 
-		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		cmd.builder.db.busy = false;
 
 		var count = 0;
 
-		if (response) {
+		if (response)
 			response = response.parseJSON(true);
-			count = response.count;
-		}
 
+		if (response instanceof Array) {
+			err = response[0].error;
+			response = null;
+		} else if (response)
+			count = response.count;
+
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		if (!count && cmd.insert) {
 			if (cmd.insert !== true)
 				cmd.builder.value = cmd.insert;
@@ -434,16 +473,20 @@ function remove(client, cmd) {
 
 	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
 
-		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		cmd.builder.db.busy = false;
 
 		var count = 0;
 
-		if (response) {
+		if (response)
 			response = response.parseJSON(true);
-			count = response.count;
-		}
 
+		if (response instanceof Array) {
+			err = response[0].error;
+			response = null;
+		} else if (response)
+			count = response.count;
+
+		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		cmd.builder.$callback(err, count, response ? response.scanned : 0);
 
 	});
