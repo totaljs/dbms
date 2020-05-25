@@ -1,6 +1,5 @@
 const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
-const FLAGS = ['json', 'post', 'keepalive'];
 const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1 };
 
 function select(client, cmd) {
@@ -453,7 +452,6 @@ function remove(client, cmd) {
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
 
-
 	data.db = opt.table;
 	client.$opt.ws.senddata(data, function(err, response) {
 
@@ -513,6 +511,82 @@ function clientcommand(cmd, client) {
 	}
 }
 
+function makesocket(opt) {
+	WEBSOCKETCLIENT(function(client) {
+
+		var autocloseid;
+
+		// client.options.compress = false;
+		client.options.reconnect = 3000;
+		client.options.reconnectserver = true;
+
+		client.connect(opt.url);
+		client.on('open', function() {
+			opt.ws = client;
+			client.callbacks = {};
+			client.msgcounter = 1;
+			client.pending = 0;
+			client.senddata = function(data, callback) {
+
+				autocloseid && clearTimeout(autocloseid);
+
+				data.id = client.msgcounter++;
+				client.pending++;
+
+				if (callback)
+					client.callbacks[data.id] = callback;
+
+				client.send(data);
+			};
+		});
+
+		client.on('error', function(e) {
+			var err = 'TextDB connection error: ' + (e + '');
+			opt.onerror && opt.onerror(err);
+		});
+
+		client.on('close', function(e) {
+
+			var err;
+
+			if (e) {
+				err = 'TextDB connection error: ' + e;
+				opt.onerror && opt.onerror(err);
+			}
+
+			if (client.callbacks) {
+				var keys = Object.keys(client.callbacks);
+				for (var i = 0; i < keys.length; i++) {
+					var cb = client.callbacks[keys[i]];
+					cb && cb(err);
+				}
+
+				client.callbacks = null;
+			}
+			opt.is = false;
+			opt.ws = null;
+		});
+
+		var closeforce = function() {
+			client.close();
+		};
+
+		client.on('message', function(message) {
+			client.pending--;
+			var cb = client.callbacks[message.id];
+			if (cb) {
+				cb(message.err, message.response);
+				delete client.callbacks[message.id];
+			}
+			if (!opt.pooling && !client.pending) {
+				autocloseid && clearTimeout(autocloseid);
+				autocloseid = setTimeout(closeforce, 100);
+			}
+		});
+
+	});
+}
+
 exports.run = function(opt, self, cmd) {
 
 	self.$op = null;
@@ -522,80 +596,8 @@ exports.run = function(opt, self, cmd) {
 	if (!opt.is) {
 		// socket
 		opt.is = true;
-		WEBSOCKETCLIENT(function(client) {
-
-			var autocloseid;
-
-			client.connect(opt.url);
-			client.on('open', function() {
-
-				opt.ws = client;
-				client.callbacks = {};
-				client.msgcounter = 1;
-				client.pending = 0;
-
-				client.senddata = function(data, callback) {
-
-					autocloseid && clearTimeout(autocloseid);
-
-					data.id = client.msgcounter++;
-					client.pending++;
-
-					if (callback)
-						client.callbacks[data.id] = callback;
-
-					client.send(data);
-				};
-
-				clientcommand(cmd, self);
-			});
-
-			client.on('error', function(e) {
-				var err = 'TextDB connection error: ' + e;
-				opt.onerror && opt.onerror(err);
-			});
-
-			client.on('close', function(e) {
-
-				var err;
-
-				if (e) {
-					err = 'TextDB connection error: ' + e;
-					opt.onerror && opt.onerror(err);
-				}
-
-				if (client.callbacks) {
-					var keys = Object.keys(client.callbacks);
-					for (var i = 0; i < keys.length; i++) {
-						var cb = client.callbacks[keys[i]];
-						cb && cb(err);
-					}
-
-					client.callbacks = null;
-				}
-				opt.is = false;
-				opt.ws = null;
-			});
-
-			var closeforce = function() {
-				client.close();
-			};
-
-			client.on('message', function(message) {
-				client.pending--;
-				var cb = client.callbacks[message.id];
-				if (cb) {
-					cb(message.err, message.response);
-					delete client.callbacks[message.id];
-				}
-
-				if (!opt.pooling && !client.pending) {
-					autocloseid && clearTimeout(autocloseid);
-					autocloseid = setTimeout(closeforce, 100);
-				}
-			});
-
-		});
+		makesocket(opt);
+		setTimeout(exports.run, 500, opt, self, cmd);
 	} else {
 		if (opt.ws)
 			clientcommand(cmd, self);
@@ -664,7 +666,7 @@ function WHERE(builder) {
 			case 'search':
 				// tmp = ESCAPE((!cmd.compare || cmd.compare === '*' ? ('%' + cmd.value + '%') : (cmd.compare === 'beg' ? ('%' + cmd.value) : (cmd.value + '%'))));
 				opuse && condition.length && condition.push(op);
-				condition.push('doc.' + cmd.name + '.indexOf(' + push(arg, tmp) + ')!==-1');
+				condition.push('doc.' + cmd.name + '.indexOf(' + push(arg, cmd.value) + ')!==-1');
 				break;
 
 			case 'searchfull':
