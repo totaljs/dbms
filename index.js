@@ -1667,7 +1667,7 @@ exports.init = function(name, connection, onerror) {
 			break;
 		case 'textdbhttp:':
 		case 'textdbhttps:':
-			CONN[name] = { id: name, db: 'textdb', url: (connection + '/databases/').replace('textdbhttp:', 'http:').replace('textdbhttps:', 'https:'), onerror: onerror, type: 'textdb' };
+			CONN[name] = { id: name, db: 'textdb', pooling: pooling, url: connection.replace('textdbhttp:', 'ws:').replace('textdbhttps:', 'wss:'), onerror: onerror, type: 'textdb' };
 			break;
 	}
 

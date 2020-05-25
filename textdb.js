@@ -33,14 +33,12 @@ function select(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 	// builder.db.$debug && builder.db.$debug(q);
 
-	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
+	data.db = opt.table;
+	client.$opt.ws.senddata(data, function(err, response) {
+
 		builder.db.busy = false;
 
 		var rows = EMPTYARRAY;
-
-		if (response)
-			response = response.parseJSON(true);
-
 		if (response instanceof Array) {
 			err = response[0].error;
 			response = null;
@@ -57,7 +55,6 @@ function select(client, cmd) {
 			client.$dbms._joins(rows, builder, response ? response.count : 0);
 			setImmediate(builder.db.$next);
 		} else {
-			response.response = undefined;
 			builder.$callback(err, rows, response ? response.count : 0);
 		}
 
@@ -81,21 +78,16 @@ function check(client, cmd) {
 
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+	data.db = opt.table;
 
-	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
-
+	client.$opt.ws.senddata(data, function(err, response) {
 		builder.db.busy = false;
 		var is = false;
-
-		if (response)
-			response = response.parseJSON(true);
-
 		if (response instanceof Array) {
 			err = response[0].error;
 			response = null;
 		} else if (response && response.response.length)
 			is = true;
-
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.$callback(err, is, response ? response.scanned : 0);
 	});
@@ -119,11 +111,10 @@ function query(client, cmd) {
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db);
 
-	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
-		builder.db.busy = false;
+	data.db = opt.table;
 
-		if (response)
-			response = response.parseJSON(true);
+	client.$opt.ws.senddata(data, function(err, response) {
+		builder.db.busy = false;
 
 		if (response instanceof Array) {
 			err = response[0].error;
@@ -172,17 +163,15 @@ function scalar(client, cmd) {
 
 	data.builder.scalar = scalar;
 	data.builder.scalararg = {};
+	data.db = opt.table;
 
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
+	client.$opt.ws.senddata(data, function(err, response) {
 		builder.db.busy = false;
 
 		var value;
-
-		if (response)
-			response = response.parseJSON(true);
 
 		if (response instanceof Array) {
 			err = response[0].error;
@@ -268,11 +257,9 @@ function insert(client, cmd) {
 	data.command = 'insert';
 	data.builder = {};
 	data.builder.payload = doc;
-
-	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
+	data.db = opt.table;
+	client.$opt.ws.senddata(data, function(err, response) {
 		builder.db.busy = false;
-		if (response)
-			response = response.parseJSON(true);
 
 		if (response instanceof Array) {
 			err = response[0].error;
@@ -299,14 +286,11 @@ function insertexists(client, cmd) {
 	data.builder.filterarg = { arg: filter.arg };
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, data);
-
-	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
+	data.db = opt.table;
+	client.$opt.ws.senddata(data, function(err, response) {
 		builder.db.busy = false;
 
 		var rows = EMPTYARRAY;
-
-		if (response)
-			response = response.parseJSON(true);
 
 		if (response instanceof Array) {
 			err = response[0].error;
@@ -425,14 +409,12 @@ function modify(client, cmd) {
 	cmd.builder.db.$debug && cmd.builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'update', data);
 
-	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
+	data.db = opt.table;
+	client.$opt.ws.senddata(data, function(err, response) {
 
 		cmd.builder.db.busy = false;
 
 		var count = 0;
-
-		if (response)
-			response = response.parseJSON(true);
 
 		if (response instanceof Array) {
 			err = response[0].error;
@@ -471,14 +453,13 @@ function remove(client, cmd) {
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
 
-	REQUEST(client.$opt.url + opt.table + '/query/', FLAGS, data, function(err, response) {
+
+	data.db = opt.table;
+	client.$opt.ws.senddata(data, function(err, response) {
 
 		cmd.builder.db.busy = false;
 
 		var count = 0;
-
-		if (response)
-			response = response.parseJSON(true);
 
 		if (response instanceof Array) {
 			err = response[0].error;
@@ -533,10 +514,94 @@ function clientcommand(cmd, client) {
 }
 
 exports.run = function(opt, self, cmd) {
+
 	self.$op = null;
 	self.busy = true;
 	self.$opt = opt;
-	clientcommand(cmd, self);
+
+	if (!opt.is) {
+		// socket
+		opt.is = true;
+		WEBSOCKETCLIENT(function(client) {
+
+			var autocloseid;
+
+			client.connect(opt.url);
+			client.on('open', function() {
+
+				opt.ws = client;
+				client.callbacks = {};
+				client.msgcounter = 1;
+				client.pending = 0;
+
+				client.senddata = function(data, callback) {
+
+					autocloseid && clearTimeout(autocloseid);
+
+					data.id = client.msgcounter++;
+					client.pending++;
+
+					if (callback)
+						client.callbacks[data.id] = callback;
+
+					client.send(data);
+				};
+
+				clientcommand(cmd, self);
+			});
+
+			client.on('error', function(e) {
+				var err = 'TextDB connection error: ' + e;
+				opt.onerror && opt.onerror(err);
+			});
+
+			client.on('close', function(e) {
+
+				var err;
+
+				if (e) {
+					err = 'TextDB connection error: ' + e;
+					opt.onerror && opt.onerror(err);
+				}
+
+				if (client.callbacks) {
+					var keys = Object.keys(client.callbacks);
+					for (var i = 0; i < keys.length; i++) {
+						var cb = client.callbacks[keys[i]];
+						cb && cb(err);
+					}
+
+					client.callbacks = null;
+				}
+				opt.is = false;
+				opt.ws = null;
+			});
+
+			var closeforce = function() {
+				client.close();
+			};
+
+			client.on('message', function(message) {
+				client.pending--;
+				var cb = client.callbacks[message.id];
+				if (cb) {
+					cb(message.err, message.response);
+					delete client.callbacks[message.id];
+				}
+
+				if (!opt.pooling && !client.pending) {
+					autocloseid && clearTimeout(autocloseid);
+					autocloseid = setTimeout(closeforce, 100);
+				}
+			});
+
+		});
+	} else {
+		if (opt.ws)
+			clientcommand(cmd, self);
+		else
+			setTimeout(exports.run, 500, opt, self, cmd);
+	}
 };
 
 function push(arr, value) {
