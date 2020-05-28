@@ -21,7 +21,7 @@ function select(client, cmd) {
 	data.builder.filterarg = { arg: filter.arg };
 
 	if (filter.sort)
-		filter.builder.sort = filter.sort;
+		data.builder.sort = filter.sort;
 
 	if (filter.take)
 		data.builder.take = filter.take;
