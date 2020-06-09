@@ -633,7 +633,10 @@ function WHERE(builder) {
 					cmd.compare = '!=';
 				else if (cmd.compare === '=')
 					cmd.compare = '==';
-				condition.push('doc.' + cmd.name + cmd.compare + push(arg, cmd.value));
+				if (cmd.value === undefined)
+					condition.push(cmd.name);
+				else
+					condition.push('doc.' + cmd.name + cmd.compare + push(arg, cmd.value));
 				break;
 			case 'custom':
 				cmd.fn.call(builder, builder, builder.db.$output, builder.db.$lastoutput);

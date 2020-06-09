@@ -656,9 +656,14 @@ function WHERE(builder, scalar, group, params) {
 
 		switch (cmd.type) {
 			case 'where':
-				tmp = ESCAPE(cmd.value);
-				opuse && condition.length && condition.push(op);
-				condition.push(cmd.name + ((cmd.value == null || tmp == 'null') && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
+				if (cmd.value === undefined) {
+					opuse && condition.length && condition.push(op);
+					condition.push(cmd.name);
+				} else {
+					tmp = ESCAPE(cmd.value);
+					opuse && condition.length && condition.push(op);
+					condition.push(cmd.name + ((cmd.value == null || tmp == 'null') && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
+				}
 				break;
 			case 'custom':
 				cmd.fn.call(builder, builder, builder.db.$output, builder.db.$lastoutput);
