@@ -518,6 +518,7 @@ function makesocket(opt) {
 
 		// client.options.compress = false;
 		client.options.reconnect = 3000;
+		client.options.encodedecode = false;
 		client.options.reconnectserver = true;
 
 		client.connect(opt.url);
