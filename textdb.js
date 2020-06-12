@@ -29,6 +29,9 @@ function select(client, cmd) {
 	if (filter.skip)
 		data.builder.skip = filter.skip;
 
+	if (cmd.type !== 'list' && !filter.sort)
+		data.command = 'find2';
+
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 	// builder.db.$debug && builder.db.$debug(q);
 
