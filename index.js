@@ -2243,6 +2243,7 @@ QB.gridfilter = function(name, obj, type, key) {
 				type = Number;
 				break;
 			case 'string':
+			case 'uid':
 				type = String;
 				break;
 			case 'date':
