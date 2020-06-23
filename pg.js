@@ -115,9 +115,9 @@ function query(client, cmd) {
 
 function command(client, sql, cmd) {
 	cmd.db.$debug && cmd.db.$debug(sql);
-	F.$events.dbms && EMIT('dbms', 'query', sql, cmd.builder.options.db);
+	F.$events.dbms && EMIT('dbms', 'query', sql, cmd.db);
 	client.query(sql, function(err) {
-		cmd.builder.db.busy = false;
+		cmd.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, sql);
 		cmd.db.$next(err);
 	});
