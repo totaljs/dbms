@@ -63,6 +63,7 @@ function select(client, cmd) {
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
+
 		var rows = response ? response.rows : EMPTYARRAY;
 		if (opt.first)
 			rows = rows.length ? rows[0] : null;
@@ -73,6 +74,7 @@ function select(client, cmd) {
 			setImmediate(builder.db.$next);
 		} else
 			builder.$callback(err, rows);
+
 	});
 }
 
@@ -469,6 +471,38 @@ function clientcommand(cmd, client, self) {
 			break;
 		case 'find':
 		case 'read':
+			select(client, cmd);
+			break;
+		case 'readmod':
+			var cb = cmd.builder.$callback;
+			cmd.builder.$callback = function(err, response) {
+				cmd.builder.options.fields = null;
+				if (err) {
+					cb.call(cmd.builder, err, 0);
+				} else if (response) {
+					var mod = cmd.fn(response);
+					if (mod) {
+						cmd.builder.value = mod;
+						cmd.builder.$callback = cb;
+						if (cmd.builder.value.$clean)
+							cmd.builder.value = cmd.builder.value.$clean();
+						modify(client, cmd);
+					} else
+						cb.call(cmd.builder, err, 0);
+				} else {
+					if (cmd.insert) {
+						mod = cmd.fn(null);
+						if (mod) {
+							cmd.builder.value = mod;
+							cmd.builder.$callback = cb;
+							insert(client, cmd);
+						} else
+							cb.call(cmd.builder, err, 0);
+					} else {
+						cb.call(cmd.builder, err, 0);
+					}
+				}
+			};
 			select(client, cmd);
 			break;
 		case 'check':
