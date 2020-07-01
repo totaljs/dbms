@@ -473,7 +473,7 @@ function clientcommand(cmd, client, self) {
 		case 'read':
 			select(client, cmd);
 			break;
-		case 'readmod':
+		case 'modify2':
 			var cb = cmd.builder.$callback;
 			cmd.builder.$callback = function(err, response) {
 				cmd.builder.options.fields = null;

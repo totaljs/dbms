@@ -642,38 +642,30 @@ DP.upd = DP.update = function(table, value, insert) {
 
 DP.mod = DP.modify = function(table, value, insert) {
 
-	if (typeof(value) === 'function')
-		return this.readmod(table, value, insert);
-
 	var self = this;
-	var builder = new QueryBuilder(self, 'modify');
-	builder.table(table);
-	builder.value = value || {};
+	var builder;
 
-	// Total.js schemas
-	if (builder.value.$clean)
-		builder.value = builder.value.$clean();
-
-	builder.$commandindex = self.$commands.push({ type: 'modify', builder: builder, insert: insert }) - 1;
+	if (typeof(value) === 'function') {
+		builder = new QueryBuilder(self, 'read');
+		builder.table(table);
+		builder.options.first = true;
+		builder.options.take = 1;
+		builder.$commandindex = self.$commands.push({ type: 'modify2', builder: builder, fn: value, insert: insert }) - 1;
+	} else {
+		builder = new QueryBuilder(self, 'modify');
+		builder.table(table);
+		builder.value = value || {};
+		// Total.js schemas
+		if (builder.value.$clean)
+			builder.value = builder.value.$clean();
+		builder.$commandindex = self.$commands.push({ type: 'modify', builder: builder, insert: insert }) - 1;
+	}
 
 	if (!self.busy) {
 		self.$op && clearImmediate(self.$op);
 		self.$op = setImmediate(self.$next);
 	}
-	return builder;
-};
 
-DP.readmod = function(table, fn, insert) {
-	var self = this;
-	var builder = new QueryBuilder(self, 'read');
-	builder.table(table);
-	builder.options.first = true;
-	builder.options.take = 1;
-	builder.$commandindex = self.$commands.push({ type: 'readmod', builder: builder, fn: fn, insert: insert }) - 1;
-	if (!self.busy) {
-		self.$op && clearImmediate(self.$op);
-		self.$op = setImmediate(self.$next);
-	}
 	return builder;
 };
 

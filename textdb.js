@@ -498,6 +498,40 @@ function clientcommand(cmd, client) {
 			else
 				insert(client, cmd);
 			break;
+
+		case 'modify2':
+			var cb = cmd.builder.$callback;
+			cmd.builder.$callback = function(err, response) {
+				cmd.builder.options.fields = null;
+				if (err) {
+					cb.call(cmd.builder, err, 0);
+				} else if (response) {
+					var mod = cmd.fn(response);
+					if (mod) {
+						cmd.builder.value = mod;
+						cmd.builder.$callback = cb;
+						if (cmd.builder.value.$clean)
+							cmd.builder.value = cmd.builder.value.$clean();
+						modify(client, cmd);
+					} else
+						cb.call(cmd.builder, err, 0);
+				} else {
+					if (cmd.insert) {
+						mod = cmd.fn(null);
+						if (mod) {
+							cmd.builder.value = mod;
+							cmd.builder.$callback = cb;
+							insert(client, cmd);
+						} else
+							cb.call(cmd.builder, err, 0);
+					} else {
+						cb.call(cmd.builder, err, 0);
+					}
+				}
+			};
+			select(client, cmd);
+			break;
+
 		case 'update':
 		case 'modify':
 			modify(client, cmd);
