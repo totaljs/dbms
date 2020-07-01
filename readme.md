@@ -60,13 +60,6 @@ db.insert('mynosql/collection_table_name', document, [unique]);
 db.insert('mytable/collection_table_name', document, [unique]);
 ```
 
-## Contributors
-
-| Contributor | Type | E-mail |
-|-------------|------|--------|
-| [Peter Širka](https://github.com/JozefGula) | author + support | <petersirka@gmail.com> |
-| [Martin Smola](https://github.com/molda) | contributor + support | <smola.martin@gmail.com> |
-
 ## Contact
 
 Do you have any questions? Contact us <https://www.totaljs.com/contact/>
