@@ -560,7 +560,7 @@ DP.group = function(table, prop) {
 	return this.scalar(table, 'group', prop);
 };
 
-DP.begin = DP.transaction = function(conn) {
+DP.begin = function(conn) {
 	var self = this;
 	self.$commands.push({ type: 'transaction', db: self, conn: conn || 'default' });
 	return self;

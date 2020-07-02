@@ -315,8 +315,10 @@ function insert(client, cmd) {
 	client.query(q, params, function(err, response) {
 
 		// Transaction is aborted
-		if (err && err.code === '25P02')
+		if (err && client.$dbmstransaction) {
+			client.$dbmstransaction = true;
 			abortcommands(client, builder);
+		}
 
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -434,8 +436,10 @@ function modify(client, cmd) {
 	client.query(q, params, function(err, response) {
 
 		// Transaction is aborted
-		if (err && err.code === '25P02')
+		if (err && client.$dbmstransaction) {
+			client.$dbmstransaction = true;
 			abortcommands(client, builder);
+		}
 
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -461,8 +465,10 @@ function remove(client, cmd) {
 	client.query(q, params, function(err, response) {
 
 		// Transaction is aborted
-		if (err && err.code === '25P02')
+		if (err && client.$dbmstransaction) {
+			client.$dbmstransaction = true;
 			abortcommands(client, builder);
+		}
 
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -473,8 +479,13 @@ function remove(client, cmd) {
 }
 
 function destroy(conn) {
+
 	var client = conn.client;
 	if (client) {
+
+		if (client.$dbmstransaction)
+			client.$dbmstransaction = false;
+
 		if (client.release)
 			client.release();
 		else
@@ -485,6 +496,7 @@ function destroy(conn) {
 function clientcommand(cmd, client, self) {
 	switch (cmd.type) {
 		case 'transaction':
+			client.$dbmstransaction = true;
 			command(client, 'BEGIN', cmd);
 			break;
 		case 'end':
@@ -493,6 +505,7 @@ function clientcommand(cmd, client, self) {
 			break;
 		case 'commit':
 		case 'rollback':
+			client.$dbmstransaction = false;
 			command(client, cmd.type.toUpperCase(), cmd);
 			break;
 		case 'find':
