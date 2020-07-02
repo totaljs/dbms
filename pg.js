@@ -220,6 +220,17 @@ function scalar(client, cmd) {
 	});
 }
 
+function abortcommands(client, builder) {
+	while (builder.db.$commands.length) {
+		var c = builder.db.$commands.shift();
+		if (c && c.type === 'commit') {
+			c.type = 'rollback';
+			builder.db.$commands.unshift(c);
+			break;
+		}
+	}
+}
+
 function insert(client, cmd) {
 
 	var builder = cmd.builder;
@@ -302,6 +313,11 @@ function insert(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db);
 
 	client.query(q, params, function(err, response) {
+
+		// Transaction is aborted
+		if (err && err.code === '25P02')
+			abortcommands(client, builder);
+
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		builder.$callback(err, err == null ? (response.rows && response.rows.length ? response.rows[0][builder.$primarykey] : 1) : 0);
@@ -416,6 +432,11 @@ function modify(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'update', opt.table, opt.db);
 	client.query(q, params, function(err, response) {
+
+		// Transaction is aborted
+		if (err && err.code === '25P02')
+			abortcommands(client, builder);
+
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
@@ -438,6 +459,11 @@ function remove(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
 	client.query(q, params, function(err, response) {
+
+		// Transaction is aborted
+		if (err && err.code === '25P02')
+			abortcommands(client, builder);
+
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
