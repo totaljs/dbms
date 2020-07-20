@@ -519,7 +519,7 @@ function clientcommand(cmd, client, self) {
 				if (err) {
 					cb.call(cmd.builder, err, 0);
 				} else if (response) {
-					var mod = cmd.fn(response);
+					var mod = cmd.fn(response, cmd.builder.db.$outputall);
 					if (mod) {
 						cmd.builder.value = mod;
 						cmd.builder.$callback = cb;
@@ -530,7 +530,7 @@ function clientcommand(cmd, client, self) {
 						cb.call(cmd.builder, err, 0);
 				} else {
 					if (cmd.insert) {
-						mod = cmd.fn(null);
+						mod = cmd.fn(null, cmd.builder.db.$outputall);
 						if (mod) {
 							cmd.builder.value = mod;
 							cmd.builder.$callback = cb;
