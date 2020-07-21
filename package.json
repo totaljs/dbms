@@ -1,6 +1,6 @@
 {
   "name": "dbms",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "description": "Database Management System",
   "main": "index.js",
   "scripts": {
