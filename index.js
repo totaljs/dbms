@@ -1044,6 +1044,18 @@ QB.permit = function(name, type, value, useridfield, userid, must) {
 	return self;
 };
 
+QB.id = function(value) {
+	return value instanceof Array ? this.in('id', value) : this.where('id', value);
+};
+
+QB.userid = function(value) {
+	return this.where('userid', value);
+};
+
+QB.undeleted = function() {
+	return this.where('isremoved=FALSE');
+};
+
 QB.in = function(name, value) {
 	var self = this;
 	self.$commands.push({ type: 'in', name: name, value: value });
