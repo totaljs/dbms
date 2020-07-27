@@ -412,6 +412,18 @@ DP.all = DP.find = function(table) {
 	return builder;
 };
 
+DP.dif = DP.diff = function(table, form, prop) {
+	var self = this;
+	var builder = new QueryBuilder(self, 'diff');
+	builder.table(table);
+	self.$commands.push({ type: 'diff', builder: builder, form: form, key: prop || 'id' });
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
+	return builder;
+};
+
 DP.task = function(fn) {
 	this.$commands.push({ type: 'task', value: fn });
 	return this;
@@ -794,6 +806,7 @@ QB.table = function(table) {
 		cache.type = CONN[cache.db] ? CONN[cache.db].type : '';
 		CACHE[table] = cache;
 	}
+	self.options.path = table;
 	self.options.db = cache.db;
 	self.options.table = cache.table;
 	self.options.dbname = cache.type;
