@@ -2512,7 +2512,7 @@ DP._joins = function(response, builder, count) {
 
 		var first = join.options.first;
 		join.options.first = false;
-		join.options.take = join.options.take || 10000; // max. limit
+		join.options.take = first ? 10000 : (join.options.take || 10000); // max. limit
 		join.in(meta.a, arr);
 		join.callback(function(err, data) {
 
