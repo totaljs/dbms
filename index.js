@@ -1069,9 +1069,9 @@ QB.undeleted = function() {
 	return this.where('isremoved=FALSE');
 };
 
-QB.in = function(name, value) {
+QB.in = function(name, value, field) {
 	var self = this;
-	self.$commands.push({ type: 'in', name: name, value: value });
+	self.$commands.push({ type: 'in', name: name, value: value, field: field });
 	return self;
 };
 
