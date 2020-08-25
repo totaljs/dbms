@@ -1042,6 +1042,12 @@ QB.where = function(name, compare, value) {
 	return self;
 };
 
+QB.owner = function(name, value, member, condition) {
+	var self = this;
+	self.$commands.push({ type: 'owner', name: name, value: value, member: member, condition: condition });
+	return self;
+};
+
 QB.permit = function(name, type, value, useridfield, userid, must) {
 
 	// type: R read
@@ -2231,29 +2237,28 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localize
 	}
 
 	if (query.sort) {
-		var index = query.sort.lastIndexOf('_');
-		if (index !== -1) {
-			var name = query.sort.substring(0, index);
-			var can = true;
+
+		tmp = query.sort.split(',');
+		var count = 0;
+
+		for (var i = 0; i < tmp.length; i++) {
+			var index = tmp[i].lastIndexOf('_');
+			var name = index === - 1 ? tmp[i] : tmp[i].substring(0, index);
 
 			if (skipped && skipped[name])
-				can = false;
+				continue;
 
-			if (can && allowed && !allowed.meta[name])
-				can = false;
+			if (allowed) {
+				if (!allowed.meta[name] && !schema.schema[name])
+					continue;
+			} else if (!schema.schema[name])
+				continue;
 
-			if (can && !allowed) {
-				if (!schema.schema[name])
-					can = false;
-			} else if (!can)
-				can = !!schema.schema[name];
+			self.sort(name, tmp[i][index + 1] === 'd');
+			count++;
+		}
 
-			if (can)
-				self.sort(name, query.sort[index + 1] === 'd');
-			else if (defsort)
-				self.gridsort(defsort);
-
-		} else if (defsort)
+		if (!count && defsort)
 			self.gridsort(defsort);
 
 	} else if (defsort)

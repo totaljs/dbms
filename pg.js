@@ -714,6 +714,27 @@ exports.blob_write = function(opt, stream, name, callback) {
 	});
 };
 
+function prepare_owner(cmd, condition) {
+
+	var tmp = [];
+
+	for (var i = 0; i < cmd.member.length; i++)
+		tmp.push(ESCAPE(cmd.member[i]));
+
+	var addcondition = [];
+	var keys = cmd.condition ? Object.keys(cmd.condition) : null;
+	if (keys) {
+		addcondition.push('');
+		for (var i = 0; i < keys.length; i++) {
+			var val = cmd.condition[keys[i]];
+			addcondition.push(keys[i] + (val == null ? ' IS ' : '=') + ESCAPE(val));
+		}
+	}
+
+	// e.g. userid=ID OR (userid IN (ARR) (AND condition))
+	condition.push('(' + cmd.name + '=' + ESCAPE(cmd.value) + (tmp.length ? (' OR (' + cmd.name + ' IN (' + tmp.join(',') + ')' + addcondition.join(' AND ') + ')') : '') + ')');
+}
+
 function WHERE(builder, scalar, group, params) {
 	var condition = [];
 	var sort = [];
@@ -746,9 +767,16 @@ function WHERE(builder, scalar, group, params) {
 					condition.push(cmd.name + ((cmd.value == null || tmp == 'null') && cmd.compare === '=' ? ' IS ' : cmd.compare) + tmp);
 				}
 				break;
+
+			case 'owner':
+				opuse && condition.length && condition.push(op);
+				prepare_owner(cmd, condition);
+				break;
+
 			case 'custom':
 				cmd.fn.call(builder, builder, builder.db.$output, builder.db.$lastoutput);
 				break;
+
 			case 'in':
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
@@ -769,6 +797,7 @@ function WHERE(builder, scalar, group, params) {
 					condition.push(cmd.name + '=' + ESCAPE(cmd.field ? cmd.value[cmd.field] : cmd.value));
 				}
 				break;
+
 			case 'notin':
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
@@ -789,10 +818,12 @@ function WHERE(builder, scalar, group, params) {
 					condition.push(cmd.name + '<>' + ESCAPE(cmd.field ? cmd.value[cmd.field] : cmd.value));
 				}
 				break;
+
 			case 'between':
 				opuse && condition.length && condition.push(op);
 				condition.push('(' + cmd.name + '>=' + ESCAPE(cmd.a) + ' AND ' + cmd.name + '<=' + ESCAPE(cmd.b) + ')');
 				break;
+
 			case 'search':
 				tmp = ESCAPE((!cmd.compare || cmd.compare === '*' ? ('%' + cmd.value + '%') : (cmd.compare === 'beg' ? ('%' + cmd.value) : (cmd.value + '%'))));
 				opuse && condition.length && condition.push(op);
@@ -954,8 +985,8 @@ function FIELDS(builder) {
 
 // Author: https://github.com/segmentio/pg-escape
 // License: MIT
-function pg_escape(val){
-	if (val === null)
+function pg_escape(val) {
+	if (val == null)
 		return 'NULL';
 	var backslash = ~val.indexOf('\\');
 	var prefix = backslash ? 'E' : '';
