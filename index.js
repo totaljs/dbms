@@ -2388,8 +2388,18 @@ QB.gridfilter = function(name, obj, type, key) {
 };
 
 // Grid sorting
-QB.gridsort = function(sort) {
+QB.gridsort = function(sort, one) {
+
 	var builder = this;
+
+	// Added multi-sort
+	if (!one && sort.indexOf(',') !== -1) {
+		sort = sort.split(',');
+		for (var i = 0; i < sort.length; i++)
+			builder.gridsort(sort[i].trim(), true);
+		return builder;
+	}
+
 	var index = sort.lastIndexOf('_');
 	if (index === -1)
 		index = sort.lastIndexOf(' ');
