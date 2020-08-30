@@ -1078,7 +1078,8 @@ QB.userid = function(value) {
 };
 
 QB.undeleted = function() {
-	return this.where('isremoved=FALSE');
+	this.$commands.push({ type: 'where', name: 'isremoved=FALSE', compare: '=' });
+	return this;
 };
 
 QB.in = function(name, value, field) {
