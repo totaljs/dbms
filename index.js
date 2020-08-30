@@ -1063,12 +1063,18 @@ QB.permit = function(name, type, value, useridfield, userid, must) {
 	return self;
 };
 
-QB.id = function(value) {
-	return value instanceof Array ? this.in('id', value) : this.where('id', value);
+QB.id = function(value, field) {
+	var self = this;
+	if (value instanceof Array)
+		self.$commands.push({ type: 'in', name: 'id', value: value, field: field });
+	else
+		self.$commands.push({ type: 'where', name: 'id', value: value, compare: '=' });
+	return self;
 };
 
 QB.userid = function(value) {
-	return this.where('userid', value);
+	this.$commands.push({ type: 'where', name: 'userid', value: value, compare: '=' });
+	return this;
 };
 
 QB.undeleted = function() {
