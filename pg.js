@@ -60,6 +60,10 @@ function select(client, cmd) {
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 	builder.db.$debug && builder.db.$debug(q);
+
+	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		F.stats.performance.dbrm++;
+
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -86,6 +90,10 @@ function check(client, cmd) {
 	var q = 'SELECT 1 FROM ' + opt.table + WHERE(builder, null, null, params);
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+
+	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		F.stats.performance.dbrm++;
+
 	builder.db.$debug && builder.db.$debug(q);
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
@@ -104,6 +112,10 @@ function query(client, cmd) {
 
 	var q = cmd.query + WHERE(builder, null, null, cmd.value);
 	builder.db.$debug && builder.db.$debug(q);
+
+	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		F.stats.performance.dbrm++;
+
 	F.$events.dbms && EMIT('dbms', 'query', cmd.query, opt.db);
 	client.query(q, cmd.value, function(err, response) {
 		builder.db.busy = false;
@@ -118,6 +130,10 @@ function query(client, cmd) {
 function command(client, sql, cmd) {
 	cmd.db.$debug && cmd.db.$debug(sql);
 	F.$events.dbms && EMIT('dbms', 'query', sql, cmd.db);
+
+	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		F.stats.performance.dbrm++;
+
 	client.query(sql, function(err) {
 		cmd.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, sql);
@@ -139,6 +155,10 @@ function list(client, cmd) {
 		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 		builder.db.$debug && builder.db.$debug(q);
 		builder.db.busy = true;
+
+		if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+			F.stats.performance.dbrm++;
+
 		client.query(q, params, function(err, response) {
 			builder.db.busy = false;
 			var rows = response ? response.rows : [];
@@ -153,6 +173,9 @@ function list(client, cmd) {
 		q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + query;
 		builder.db.$debug && builder.db.$debug(q);
 		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+
+		if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+			F.stats.performance.dbrm++;
 
 		client.query(q, params, function(err, response) {
 			builder.db.busy = false;
@@ -178,6 +201,10 @@ function list(client, cmd) {
 				q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
 				builder.db.$debug && builder.db.$debug(q);
 				F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+
+				if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+					F.stats.performance.dbrm++;
+
 				client.query(q, params, fn);
 			} else
 				fn(err, null);
@@ -208,6 +235,9 @@ function scalar(client, cmd) {
 	q = q + WHERE(builder, false, cmd.scalar === 'group' ? cmd.name : null, params);
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+
+	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		F.stats.performance.dbrm++;
 
 	client.query(q, params, function(err, response) {
 		builder.db.busy = false;
@@ -312,6 +342,9 @@ function insert(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db);
 
+	if (F.stats && F.stats.performance && F.stats.performance.dbwm != null)
+		F.stats.performance.dbwm++;
+
 	client.query(q, params, function(err, response) {
 
 		// Transaction is aborted
@@ -332,6 +365,10 @@ function insertexists(client, cmd) {
 	var q = 'SELECT 1 as dbmsvalue FROM ' + opt.table + WHERE(builder);
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+
+	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		F.stats.performance.dbrm++;
+
 	client.query(q, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -433,6 +470,10 @@ function modify(client, cmd) {
 	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'update', opt.table, opt.db);
+
+	if (F.stats && F.stats.performance && F.stats.performance.dbwm != null)
+		F.stats.performance.dbwm++;
+
 	client.query(q, params, function(err, response) {
 
 		// Transaction is aborted
@@ -462,6 +503,10 @@ function remove(client, cmd) {
 	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
+
+	if (F.stats && F.stats.performance && F.stats.performance.dbwm != null)
+		F.stats.performance.dbwm++;
+
 	client.query(q, params, function(err, response) {
 
 		// Transaction is aborted
@@ -655,12 +700,18 @@ exports.blob_read = function(opt, id, callback) {
 		if (err)
 			return callback(err);
 
+		if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+			F.stats.performance.dbrm++;
+
 		client.query('BEGIN', function(err) {
 
 			if (err) {
 				done();
 				return callback(err);
 			}
+
+			if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+				F.stats.performance.dbrm++;
 
 			Lo.create(client).readStream(id, opt.buffersize || 16384, function(err, size, stream) {
 				if (err) {
@@ -689,12 +740,18 @@ exports.blob_write = function(opt, stream, name, callback) {
 		if (err)
 			return callback(err);
 
+		if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+			F.stats.performance.dbrm++;
+
 		client.query('BEGIN', function(err) {
 
 			if (err) {
 				done();
 				return callback(err);
 			}
+
+			if (F.stats && F.stats.performance && F.stats.performance.dbwm != null)
+				F.stats.performance.dbwm++;
 
 			Lo.create(client).writeStream(opt.buffersize || 16384, function(err, oid, writer) {
 
