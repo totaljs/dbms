@@ -7,6 +7,7 @@ const REG_PARAMS = /\$\d/g;
 const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
 const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1 };
+const CANSTATS = global.F ? (global.F.stats && global.F.stats.performance && global.F.stats.performance.dbrm != null) : false;
 
 // Convertor: Numeric to number
 Database.types.setTypeParser(1700, val => val == null ? null : +val);
@@ -61,7 +62,7 @@ function select(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 	builder.db.$debug && builder.db.$debug(q);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+	if (CANSTATS)
 		F.stats.performance.dbrm++;
 
 	client.query(q, params, function(err, response) {
@@ -91,7 +92,7 @@ function check(client, cmd) {
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+	if (CANSTATS)
 		F.stats.performance.dbrm++;
 
 	builder.db.$debug && builder.db.$debug(q);
@@ -113,7 +114,7 @@ function query(client, cmd) {
 	var q = cmd.query + WHERE(builder, null, null, cmd.value);
 	builder.db.$debug && builder.db.$debug(q);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+	if (CANSTATS)
 		F.stats.performance.dbrm++;
 
 	F.$events.dbms && EMIT('dbms', 'query', cmd.query, opt.db);
@@ -131,7 +132,7 @@ function command(client, sql, cmd) {
 	cmd.db.$debug && cmd.db.$debug(sql);
 	F.$events.dbms && EMIT('dbms', 'query', sql, cmd.db);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+	if (CANSTATS)
 		F.stats.performance.dbrm++;
 
 	client.query(sql, function(err) {
@@ -156,7 +157,7 @@ function list(client, cmd) {
 		builder.db.$debug && builder.db.$debug(q);
 		builder.db.busy = true;
 
-		if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		if (CANSTATS)
 			F.stats.performance.dbrm++;
 
 		client.query(q, params, function(err, response) {
@@ -174,7 +175,7 @@ function list(client, cmd) {
 		builder.db.$debug && builder.db.$debug(q);
 		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-		if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		if (CANSTATS)
 			F.stats.performance.dbrm++;
 
 		client.query(q, params, function(err, response) {
@@ -202,7 +203,7 @@ function list(client, cmd) {
 				builder.db.$debug && builder.db.$debug(q);
 				F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-				if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+				if (CANSTATS)
 					F.stats.performance.dbrm++;
 
 				client.query(q, params, fn);
@@ -236,7 +237,7 @@ function scalar(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+	if (CANSTATS)
 		F.stats.performance.dbrm++;
 
 	client.query(q, params, function(err, response) {
@@ -342,7 +343,7 @@ function insert(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbwm != null)
+	if (CANSTATS)
 		F.stats.performance.dbwm++;
 
 	client.query(q, params, function(err, response) {
@@ -366,7 +367,7 @@ function insertexists(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+	if (CANSTATS)
 		F.stats.performance.dbrm++;
 
 	client.query(q, function(err, response) {
@@ -471,7 +472,7 @@ function modify(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'update', opt.table, opt.db);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbwm != null)
+	if (CANSTATS)
 		F.stats.performance.dbwm++;
 
 	client.query(q, params, function(err, response) {
@@ -504,7 +505,7 @@ function remove(client, cmd) {
 	builder.db.$debug && builder.db.$debug(q);
 	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
 
-	if (F.stats && F.stats.performance && F.stats.performance.dbwm != null)
+	if (CANSTATS)
 		F.stats.performance.dbwm++;
 
 	client.query(q, params, function(err, response) {
@@ -700,7 +701,7 @@ exports.blob_read = function(opt, id, callback) {
 		if (err)
 			return callback(err);
 
-		if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		if (CANSTATS)
 			F.stats.performance.dbrm++;
 
 		client.query('BEGIN', function(err) {
@@ -710,7 +711,7 @@ exports.blob_read = function(opt, id, callback) {
 				return callback(err);
 			}
 
-			if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+			if (CANSTATS)
 				F.stats.performance.dbrm++;
 
 			Lo.create(client).readStream(id, opt.buffersize || 16384, function(err, size, stream) {
@@ -740,7 +741,7 @@ exports.blob_write = function(opt, stream, name, callback) {
 		if (err)
 			return callback(err);
 
-		if (F.stats && F.stats.performance && F.stats.performance.dbrm != null)
+		if (CANSTATS)
 			F.stats.performance.dbrm++;
 
 		client.query('BEGIN', function(err) {
@@ -750,7 +751,7 @@ exports.blob_write = function(opt, stream, name, callback) {
 				return callback(err);
 			}
 
-			if (F.stats && F.stats.performance && F.stats.performance.dbwm != null)
+			if (CANSTATS)
 				F.stats.performance.dbwm++;
 
 			Lo.create(client).writeStream(opt.buffersize || 16384, function(err, oid, writer) {
