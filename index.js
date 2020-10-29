@@ -1358,7 +1358,6 @@ QB.subquery = function(name, query) {
 QB.fields = function(fields) {
 
 	var self = this;
-
 	var arr = arguments;
 	var is = false;
 
@@ -2124,6 +2123,96 @@ QB.gridfields = function(fields, allowed) {
 	return self;
 };
 
+QB.autoquery = function(query, schema, defsort, maxlimit, localized) {
+
+	var self = this;
+	var skipped;
+	var key = 'QBF' + schema;
+	var allowed = CACHE[key];
+	var tmp;
+
+	if (!allowed) {
+		var obj = {};
+		var arr = [];
+		var filter = [];
+
+		if (localized)
+			localized = localized.split(',');
+
+		tmp = schema.split(',').trim();
+		for (var i = 0; i < tmp.length; i++) {
+			var k = tmp[i].split(':').trim();
+			obj[k[0]] = 1;
+
+			if (localized && localized.indexOf(k[0]) !== -1)
+				arr.push(k[0] + '§');
+			else
+				arr.push(k[0]);
+
+			k[1] && filter.push({ name: k[0], type: (k[1] || '').toLowerCase() });
+		}
+
+		allowed = CACHE[key] = { keys: arr, meta: obj, filter: filter };
+	}
+
+	var fields = query.fields;
+	var fieldscount = 0;
+
+	if (!self.options.fields)
+		self.options.fields = [];
+
+	if (fields) {
+		fields = fields.replace(REG_FIELDS_CLEANER, '').split(',');
+		for (var i = 0; i < fields.length; i++) {
+			var field = fields[i];
+			if (allowed && allowed.meta[field]) {
+				self.options.fields.push(self.options.dbname === 'pg' ? ('"' + fields[i] + '"') : fields[i]);
+				fieldscount++;
+			}
+		}
+	}
+
+	if (!fieldscount) {
+		for (var i = 0; i < allowed.keys.length; i++)
+			self.options.fields.push(allowed.keys[i]);
+	}
+
+	if (allowed && allowed.filter) {
+		for (var i = 0; i < allowed.filter.length; i++) {
+			tmp = allowed.filter[i];
+			self.gridfilter(tmp.name, query, tmp.type);
+		}
+	}
+
+	if (query.sort) {
+
+		tmp = query.sort.split(',');
+		var count = 0;
+
+		for (var i = 0; i < tmp.length; i++) {
+			var index = tmp[i].lastIndexOf('_');
+			var name = index === - 1 ? tmp[i] : tmp[i].substring(0, index);
+
+			if (skipped && skipped[name])
+				continue;
+
+			if (!allowed.meta[name] && !schema.schema[name])
+				continue;
+
+			self.sort(name, tmp[i][index + 1] === 'd');
+			count++;
+		}
+
+		if (!count && defsort)
+			self.gridsort(defsort);
+
+	} else if (defsort)
+		self.gridsort(defsort);
+
+	maxlimit && self.paginate(query.page, query.limit, maxlimit);
+	return self;
+};
+
 QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localized) {
 
 	if (typeof(defsort) === 'number') {
@@ -2140,7 +2229,7 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localize
 	var tmp;
 
 	if (skipfilter) {
-		key = 'QBS' + skipfilter;
+		key = 'QABS' + skipfilter;
 		skipped = CACHE[key];
 		if (!skipped) {
 			tmp = skipfilter.split(',').trim();
@@ -2152,7 +2241,7 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localize
 	}
 
 	if (allowedfields) {
-		key = 'QBF' + allowedfields;
+		key = 'QABF' + allowedfields;
 		allowed = CACHE[key];
 		if (!allowed) {
 			var obj = {};
@@ -2271,7 +2360,7 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localize
 	} else if (defsort)
 		self.gridsort(defsort);
 
-	maxlimit && self.paginate(query.page, query.limit, maxlimit || 50);
+	maxlimit && self.paginate(query.page, query.limit, maxlimit);
 	return self;
 };
 
@@ -2571,9 +2660,7 @@ DP._joins = function(response, builder, count) {
 	}, 3);
 };
 
-if (global.ON) {
-	global.ON('service', function(counter) {
-		if (counter % 10 === 0)
-			FIELDS = {};
-	});
-}
+global.ON && global.ON('service', function(counter) {
+	if (counter % 10 === 0)
+		FIELDS = {};
+});
