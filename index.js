@@ -2149,7 +2149,7 @@ QB.autoquery = function(query, schema, defsort, maxlimit, localized) {
 			else
 				arr.push(k[0]);
 
-			k[1] && filter.push({ name: k[0], type: (k[1] || '').toLowerCase() });
+			k[1] && filter.push({ name: k[0], type: (k[1] || 'string').toLowerCase() });
 		}
 
 		allowed = CACHE[key] = { keys: arr, meta: obj, filter: filter };
@@ -2261,7 +2261,7 @@ QB.autofill = function($, allowedfields, skipfilter, defsort, maxlimit, localize
 				else
 					arr.push(k[0]);
 
-				k[1] && filter.push({ name: k[0], type: (k[1] || '').toLowerCase() });
+				k[1] && filter.push({ name: k[0], type: (k[1] || 'string').toLowerCase() });
 			}
 			allowed = CACHE[key] = { keys: arr, meta: obj, filter: filter };
 		}
