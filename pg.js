@@ -776,8 +776,10 @@ function prepare_owner(cmd, condition) {
 
 	var tmp = [];
 
-	for (var i = 0; i < cmd.member.length; i++)
-		tmp.push(ESCAPE(cmd.member[i]));
+	if (cmd.member) {
+		for (var i = 0; i < cmd.member.length; i++)
+			tmp.push(ESCAPE(cmd.member[i]));
+	}
 
 	var addcondition = [];
 	var keys = cmd.condition ? Object.keys(cmd.condition) : null;
