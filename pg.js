@@ -796,6 +796,7 @@ function prepare_owner(cmd, condition) {
 }
 
 function WHERE(builder, scalar, group, params) {
+
 	var condition = [];
 	var sort = [];
 	var tmp;
