@@ -7,6 +7,7 @@ const COMPARE = { '<': '<', '>': '>', '>=': '>=', '=>': '>=', '=<': '<=', '<=': 
 const MODIFY = { insert: 1, update: 1, modify: 1 };
 const TEMPLATES = {};
 const REG_FIELDS_CLEANER = /"|`|\||'|\s/g;
+const CACHEBLACKLIST = { insert: 1, modify: 1, update: 1, remove: 1 };
 
 // A temporary cache for fields (it's cleaning each 10 minutes)
 var FIELDS = {};
@@ -649,10 +650,12 @@ DP.add = DP.ins = DP.insert = function(table, value, unique) {
 		builder.value = builder.value.$clean();
 
 	builder.$commandindex = self.$commands.push({ type: 'insert', builder: builder, unique: unique }) - 1;
+
 	if (!self.busy) {
 		self.$op && clearImmediate(self.$op);
 		self.$op = setImmediate(self.$next);
 	}
+
 	return builder;
 };
 
@@ -975,7 +978,7 @@ QB.$callback = function(err, value, count, iscache) {
 
 	}
 
-	if (self.db.$cachekey && !iscache)
+	if (self.db.$cachekey && !iscache && !CACHEBLACKLIST[opt.type])
 		exports.cache_set(self.db.$cachekey, self.db.$cacheexpire, opt.assign || 'default', { response: value, count: count });
 
 	if (self.$orm)
@@ -2701,7 +2704,7 @@ exports.cache_get = function(key, prop, callback) {
 	var tmp = MYCACHE[key];
 	var data;
 	if (tmp)
-		data = tmp.data[prop];
+		data = CLONE(tmp.data[prop]);
 	callback(null, data);
 };
 
