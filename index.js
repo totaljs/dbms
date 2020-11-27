@@ -49,6 +49,18 @@ const DP = DBMS.prototype;
 
 DP.promise = promise;
 
+DP.cache = function(key, expire) {
+	var self = this;
+	var f = expire[0];
+	if (f === 'c' || f === 'r') {
+		exports.cache_set(key, expire);
+	} else {
+		self.$cachekey = key;
+		self.$cacheexpire = expire;
+	}
+	return self;
+};
+
 DP.blob = function(table) {
 
 	if (!table)
@@ -326,15 +338,27 @@ DP.next = function() {
 				cmd.value = cmd.value.$clean();
 
 			var conn = CONN[cmd.conn || cmd.builder.options.db];
-			if (conn == null) {
+			if (conn) {
+				if (self.$cachekey) {
+					exports.cache_get(self.$cachekey, cmd.builder.options.assign || 'default', function(err, cache) {
+						if (cache) {
+							cmd.builder.$callback(err, cache.response, cache.count, true);
+						} else {
+							logger && loggerbeg(self, cmd);
+							require('./' + conn.db).run(conn, self, cmd);
+						}
+					});
+				} else {
+					logger && loggerbeg(self, cmd);
+					require('./' + conn.db).run(conn, self, cmd);
+				}
+
+			} else {
 				var err = new Error('Connection string "' + (cmd.conn || cmd.builder.options.db) + '" is not initialized.');
 				if (cmd.builder)
 					cmd.builder.$callback(err);
 				else
 					cmd.db.$next(err);
-			} else {
-				logger && loggerbeg(self, cmd);
-				require('./' + conn.db).run(conn, self, cmd);
 			}
 		}
 
@@ -753,9 +777,16 @@ const NOOP = function(){};
 
 QB.promise = promise;
 
+QB.cache = function(key, expire) {
+	var self = this;
+	self.db.cache(key, expire);
+	return self;
+};
+
 QB.primarykey = function(key) {
-	this.$primarykey = key;
-	return this;
+	var self = this;
+	self.$primarykey = key;
+	return self;
 };
 
 QB.prevfilter = function() {
@@ -830,7 +861,7 @@ QB.orm = function(primary) {
 	return self;
 };
 
-QB.$callback = function(err, value, count) {
+QB.$callback = function(err, value, count, iscache) {
 
 	var self = this;
 	var opt = self.options;
@@ -943,6 +974,9 @@ QB.$callback = function(err, value, count) {
 		}
 
 	}
+
+	if (self.db.$cachekey && !iscache)
+		exports.cache_set(self.db.$cachekey, self.db.$cacheexpire, opt.assign || 'default', { response: value, count: count });
 
 	if (self.$orm)
 		opt.callbacknoparam = opt.callbackokparam = opt.callbackok = opt.callbackno = opt.callback = undefined;
@@ -2660,7 +2694,49 @@ DP._joins = function(response, builder, count) {
 	}, 3);
 };
 
+var MYCACHE = {};
+var ISCACHE = false;
+
+exports.cache_get = function(key, prop, callback) {
+	var tmp = MYCACHE[key];
+	var data;
+	if (tmp)
+		data = tmp.data[prop];
+	callback(null, data);
+};
+
+exports.cache_set = function(key, expire, prop, data) {
+	var f = expire[0]; // first char
+	// "c" clear
+	// "r" remove or refresh
+	if (f === 'c' || f === 'r') {
+		if (MYCACHE[key])
+			delete MYCACHE[key];
+	} else {
+		var tmp = MYCACHE[key];
+		if (!tmp)
+			tmp = MYCACHE[key] = { expire: NOW.add(expire), data: {} };
+		tmp.data[prop] = data;
+		ISCACHE = true;
+	}
+};
+
 global.ON && global.ON('service', function(counter) {
 	if (counter % 10 === 0)
 		FIELDS = {};
+
+	if (ISCACHE) {
+		var keys = Object.keys(MYCACHE);
+		var count = 0;
+		for (var i = 0; i < keys.length; i++) {
+			var key = keys[i];
+			var item = MYCACHE[key];
+			if (item.expire < NOW)
+				delete MYCACHE[key];
+			else
+				count++;
+		}
+		ISCACHE = count > 0;
+	}
+
 });
