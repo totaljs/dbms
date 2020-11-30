@@ -1744,6 +1744,10 @@ exports.init = function(name, connection, onerror) {
 			tmp.native = native;
 			tmp.pooling = pooling;
 			CONN[name] = { id: name, db: 'pg', options: tmp, onerror: onerror, type: 'pg' };
+
+			// Due to PG_ESCAPE
+			require('./pg');
+
 			break;
 		case 'mongodb:':
 		case 'mongo:':
