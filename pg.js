@@ -849,10 +849,8 @@ function WHERE(builder, scalar, group, params) {
 							val = val[cmd.field];
 						tmp.push(ESCAPE(val));
 					}
-					if (tmp.length) {
-						opuse && condition.length && condition.push(op);
-						condition.push(cmd.name + ' IN (' + tmp.join(',') + ')');
-					}
+					opuse && condition.length && condition.push(op);
+					condition.push(cmd.name + ' IN (' + (tmp.length ? tmp.join(',') : 'NULL') + ')');
 				} else {
 					opuse && condition.length && condition.push(op);
 					condition.push(cmd.name + '=' + ESCAPE(cmd.field ? cmd.value[cmd.field] : cmd.value));
@@ -870,10 +868,8 @@ function WHERE(builder, scalar, group, params) {
 							val = val[cmd.field];
 						tmp.push(ESCAPE(val));
 					}
-					if (tmp.length) {
-						opuse && condition.length && condition.push(op);
-						condition.push(cmd.name + ' NOT IN (' + tmp.join(',') + ')');
-					}
+					opuse && condition.length && condition.push(op);
+					condition.push(cmd.name + ' NOT IN (' + (tmp.length ? tmp.join(',') : 'NULL') + ')');
 				} else {
 					opuse && condition.length && condition.push(op);
 					condition.push(cmd.name + '<>' + ESCAPE(cmd.field ? cmd.value[cmd.field] : cmd.value));
