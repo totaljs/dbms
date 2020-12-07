@@ -288,6 +288,11 @@ DP.next = function() {
 						}
 						break;
 					case 'string':
+					case 'number':
+
+						if (type === 'number')
+							cmd.value += '';
+
 						if (self.$lastoutput instanceof Array) {
 							if (cmd.reverse) {
 								if (self.$lastoutput.length) {
