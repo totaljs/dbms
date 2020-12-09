@@ -826,6 +826,12 @@ QB.get = function(path) {
 
 QB.log = function(msg, user) {
 	var self = this;
+
+	if (auditwriter) {
+		self.db.log.apply(self.db, arguments);
+		return self;
+	}
+
 	if (msg) {
 		NOW = new Date();
 		self.$log = (self.$log ? self.$log : '') + NOW.format('yyyy-MM-dd HH:mm:ss') + ' | '  + self.options.table.padRight(25) + ': ' + (user ? '[' + user.padRight(20) + '] ' : '') + msg + '\n';
@@ -833,6 +839,7 @@ QB.log = function(msg, user) {
 		Fs.appendFile(F.path.logs('dbms.log'), self.$log, NOOP);
 		self.$log = null;
 	}
+
 	return self;
 };
 
