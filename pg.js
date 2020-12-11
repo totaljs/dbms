@@ -573,7 +573,9 @@ function clientcommand(cmd, client, self) {
 				if (err) {
 					cb.call(cmd.builder, err, 0);
 				} else if (response) {
+					cmd.builder.db.busy = true;
 					var mod = cmd.fn(response, cmd.builder.db.$output, cmd.builder.db.$outputall);
+					cmd.builder.db.busy = false;
 					if (mod) {
 						cmd.builder.value = mod;
 						cmd.builder.$callback = cb;
@@ -584,7 +586,9 @@ function clientcommand(cmd, client, self) {
 						cb.call(cmd.builder, err, 0);
 				} else {
 					if (cmd.insert) {
+						cmd.builder.db.busy = true;
 						mod = cmd.fn(null, cmd.builder.db.$output, cmd.builder.db.$outputall);
+						cmd.builder.db.busy = false;
 						if (mod) {
 							cmd.builder.value = mod;
 							cmd.builder.$callback = cb;

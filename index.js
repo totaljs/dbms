@@ -222,6 +222,8 @@ DP.next = function() {
 		self.$op = null;
 	}
 
+	var stop = false;
+
 	if (cmd) {
 
 		if (cmd.builder && self.prev && self.prev.builder) {
@@ -272,8 +274,6 @@ DP.next = function() {
 			}
 		} else if (cmd.type === 'validate') {
 
-			var stop = false;
-
 			if (cmd.value == null) {
 				if (self.$lasterror)
 					stop = true;
@@ -323,6 +323,7 @@ DP.next = function() {
 			}
 
 			if (stop) {
+
 				self.$commands = null;
 
 				if (self.$callback) {
