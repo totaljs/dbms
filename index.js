@@ -1707,7 +1707,7 @@ exports.init = function(name, connection, onerror) {
 	}
 
 	if ((onerror === true || connection === true) && global.F) {
-		onerror = function(err, sql) {
+		onerror = function(err, sql, builder) {
 			F.error(new Error(err.toString() + ': ' + sql), 'DBMS');
 		};
 	}
@@ -1718,8 +1718,8 @@ exports.init = function(name, connection, onerror) {
 		connection = name;
 		name = 'default';
 		var onerror2 = onerror;
-		onerror = function(err, sql) {
-			onerror2(new Error(err.toString() + ': ' + sql));
+		onerror = function(err, sql, builder) {
+			onerror2(new Error(err.toString() + ': ' + sql), builder);
 		};
 	}
 
