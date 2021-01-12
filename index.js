@@ -2264,6 +2264,7 @@ QB.autoquery = function(query, schema, defsort, maxlimit, localized) {
 		self.gridsort(defsort);
 
 	maxlimit && self.paginate(query.page, query.limit, maxlimit);
+
 	return self;
 };
 
@@ -2451,57 +2452,27 @@ QB.gridfilter = function(name, obj, type, key) {
 		key = name;
 
 	// Between
-	var index = value.indexOf(' - ');
-	if (index !== -1) {
+	if (type === Number || type === Date) {
+		var index = value.indexOf(' - ');
+		if (index !== -1) {
 
-		arr = value.split(' - ');
+			arr = value.split(' - ');
 
-		for (var i = 0, length = arr.length; i < length; i++) {
-			var item = arr[i].trim();
-			arr[i] = convert(item, type);
-		}
-
-		if (type === Date) {
-			if (typeof(arr[0]) === 'number') {
-				arr[0] = new Date(arr[0], 1, 1, 0, 0, 0);
-				arr[1] = new Date(arr[1], 11, 31, 23, 59, 59);
-			} else
-				arr[1] = arr[1].extend('23:59:59');
-		}
-
-		return builder.between(key, arr[0], arr[1]);
-	}
-
-	// Multiple values
-	index = value.indexOf(',');
-	if (index !== -1) {
-
-		var arr = value.split(',');
-		for (var i = 0, length = arr.length; i < length; i++)
-			arr[i] = convert(arr[i], type);
-		return builder.in(key, arr);
-
-		/*
-		builder.or(function() {
 			for (var i = 0, length = arr.length; i < length; i++) {
 				var item = arr[i].trim();
-				var c = item[0];
-				switch (c) {
-					case '=':
-						builder.where(key, item.substring(1));
-						break;
-					case '<':
-						builder.search(key, item.substring(1), 'beg');
-						break;
-					case '>':
-						builder.search(key, item.substring(1), 'end');
-						break;
-					default:
-						builder.search(key, item);
-						break;
-				}
+				arr[i] = convert(item, type);
 			}
-		});*/
+
+			if (type === Date) {
+				if (typeof(arr[0]) === 'number') {
+					arr[0] = new Date(arr[0], 1, 1, 0, 0, 0);
+					arr[1] = new Date(arr[1], 11, 31, 23, 59, 59);
+				} else
+					arr[1] = arr[1].extend('23:59:59');
+			}
+
+			return builder.between(key, arr[0], arr[1]);
+		}
 	}
 
 	if (type === undefined || type === String) {
@@ -2514,6 +2485,17 @@ QB.gridfilter = function(name, obj, type, key) {
 			case '>':
 				return builder.search(key, value.substring(1), 'end');
 		}
+
+		// Multiple values
+		index = value.indexOf(',');
+
+		if (index !== -1) {
+			var arr = value.split(',');
+			for (var i = 0, length = arr.length; i < length; i++)
+				arr[i] = convert(arr[i], type);
+			return builder.in(key, arr);
+		}
+
 		return builder.search(key, value);
 	}
 
@@ -2560,6 +2542,7 @@ QB.gridsort = function(sort, one) {
 		index = sort.lastIndexOf(' ');
 	if (index === -1)
 		index = sort.length;
+
 	builder.sort(sort.substring(0, index), sort[index + 1] === 'd');
 	return builder;
 };
