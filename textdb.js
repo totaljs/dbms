@@ -171,6 +171,7 @@ function scalar(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
 	client.$opt.ws.senddata(data, function(err, response) {
+
 		builder.db.busy = false;
 
 		var value;
@@ -179,7 +180,7 @@ function scalar(client, cmd) {
 			err = response[0].error;
 			response = null;
 		} else if (response) {
-			value = response.scalararg.value;
+			value = response.response.value || 0;
 			if (cmd.scalar === 'avg')
 				value = (value / response.counter).fixed(3);
 		}
