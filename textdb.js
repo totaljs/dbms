@@ -11,7 +11,7 @@ function select(client, cmd) {
 
 	// opt.table
 	var data = {};
-	data.command = 'find';
+	data.command = cmd.type === 'list' ? 'list' : 'find';
 	data.builder = {};
 
 	if (fields)
@@ -29,24 +29,14 @@ function select(client, cmd) {
 	if (filter.skip)
 		data.builder.skip = filter.skip;
 
-	if (cmd.type !== 'list' && !filter.sort)
-		data.command = 'find2';
-
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 	// builder.db.$debug && builder.db.$debug(q);
 
 	data.db = opt.table;
 	client.$opt.ws.senddata(data, function(err, response) {
-
 		builder.db.busy = false;
 
-		var rows = EMPTYARRAY;
-		if (response instanceof Array) {
-			err = response[0].error;
-			response = null;
-		} else if (response)
-			rows = response.response;
-
+		var rows = response.output;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
 
 		if (opt.first)
@@ -54,10 +44,10 @@ function select(client, cmd) {
 
 		// checks joins
 		if (!err && builder.$joins) {
-			client.$dbms._joins(rows, builder, response ? response.count : 0);
+			client.$dbms._joins(rows, builder);
 			setImmediate(builder.db.$next);
 		} else {
-			builder.$callback(err, rows, response ? response.count : 0);
+			builder.$callback(err, rows, response.count);
 		}
 
 	});
@@ -84,14 +74,12 @@ function check(client, cmd) {
 
 	client.$opt.ws.senddata(data, function(err, response) {
 		builder.db.busy = false;
+		var output = response.output;
 		var is = false;
-		if (response instanceof Array) {
-			err = response[0].error;
-			response = null;
-		} else if (response && response.response.length)
+		if (output && output.length)
 			is = true;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, is, response ? response.scanned : 0);
+		builder.$callback(err, is);
 	});
 }
 
@@ -117,14 +105,8 @@ function query(client, cmd) {
 
 	client.$opt.ws.senddata(data, function(err, response) {
 		builder.db.busy = false;
-
-		if (response instanceof Array) {
-			err = response[0].error;
-			response = null;
-		}
-
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, response ? response.response : EMPTYARRAY, response);
+		builder.$callback(err, response.output, response.count);
 	});
 }
 
@@ -174,19 +156,14 @@ function scalar(client, cmd) {
 
 		builder.db.busy = false;
 
-		var value;
-
-		if (response instanceof Array) {
-			err = response[0].error;
-			response = null;
-		} else if (response) {
-			value = response.response.value || 0;
+		var value = response.output;
+		if (response) {
 			if (cmd.scalar === 'avg')
 				value = (value / response.counter).fixed(3);
 		}
 
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, value, response ? response.scanned : 0);
+		builder.$callback(err, value, response.count);
 	});
 }
 
@@ -263,14 +240,8 @@ function insert(client, cmd) {
 	data.db = opt.table;
 	client.$opt.ws.senddata(data, function(err, response) {
 		builder.db.busy = false;
-
-		if (response instanceof Array) {
-			err = response[0].error;
-			response = null;
-		}
-
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, err == null ? response.count : 0);
+		builder.$callback(err, err == null ? response.output : 0);
 	});
 }
 
@@ -292,22 +263,13 @@ function insertexists(client, cmd) {
 	data.db = opt.table;
 	client.$opt.ws.senddata(data, function(err, response) {
 		builder.db.busy = false;
-
-		var rows = EMPTYARRAY;
-
-		if (response instanceof Array) {
-			err = response[0].error;
-			response = null;
-		}
-
+		var rows = response.output;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		var rows = response ? response.response : EMPTYARRAY;
 		if (rows.length)
 			builder.$callback(err, 0);
 		else
 			insert(client, cmd);
 	});
-
 }
 
 function modify(client, cmd) {
@@ -414,26 +376,15 @@ function modify(client, cmd) {
 
 	data.db = opt.table;
 	client.$opt.ws.senddata(data, function(err, response) {
-
 		cmd.builder.db.busy = false;
-
-		var count = 0;
-
-		if (response instanceof Array) {
-			err = response[0].error;
-			response = null;
-		} else if (response)
-			count = response.count;
-
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		if (!count && cmd.insert) {
+		if (!response.output && cmd.insert) {
 			if (cmd.insert !== true)
 				cmd.builder.value = cmd.insert;
 			cmd.builder.options.insert && cmd.builder.options.insert(cmd.builder.value, cmd.builder.options.insertparams);
 			insert(client, cmd);
 		} else
-			cmd.builder.$callback(err, count, response ? response.scanned : 0);
-
+			cmd.builder.$callback(err, response.output, response.count);
 	});
 }
 
@@ -458,20 +409,9 @@ function remove(client, cmd) {
 
 	data.db = opt.table;
 	client.$opt.ws.senddata(data, function(err, response) {
-
 		cmd.builder.db.busy = false;
-
-		var count = 0;
-
-		if (response instanceof Array) {
-			err = response[0].error;
-			response = null;
-		} else if (response)
-			count = response.count;
-
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		cmd.builder.$callback(err, count, response ? response.scanned : 0);
-
+		cmd.builder.$callback(err, response.output, response.count);
 	});
 }
 
@@ -549,7 +489,34 @@ function clientcommand(cmd, client) {
 	}
 }
 
-function makesocket(opt) {
+function makesocket(options) {
+
+	options.ws = {};
+	options.ws.senddata = function(data, callback) {
+		var opt = {};
+		opt.url = options.url;
+		opt.headers = {};
+		opt.headers['x-textdb-database'] = data.db;
+		opt.headers['x-textdb-token'] = options.token;
+		delete data.db;
+		opt.body = JSON.stringify(data);
+		opt.keepalive = true;
+		opt.method = 'POST';
+		opt.type = 'json';
+		opt.callback = function(err, response) {
+			if (!err && response.status > 200)
+				err = response.status;
+			response.body = response.body.parseJSON(true);
+			if (!response.body)
+				response.body = { output: null, count: 0 };
+			callback(err, response.body);
+		};
+		REQUEST(opt);
+	};
+
+	return;
+
+/*
 	WEBSOCKETCLIENT(function(client) {
 
 		var autocloseid;
@@ -623,7 +590,7 @@ function makesocket(opt) {
 			}
 		});
 
-	});
+	});*/
 }
 
 exports.run = function(opt, self, cmd) {
@@ -653,7 +620,6 @@ function WHERE(builder) {
 
 	var condition = [];
 	var sort = '';
-	var tmp;
 	var op = 'AND';
 	var opuse = false;
 	var arg = [];

@@ -1768,7 +1768,9 @@ exports.init = function(name, connection, onerror) {
 			break;
 		case 'textdbhttp:':
 		case 'textdbhttps:':
-			CONN[name] = { id: name, db: 'textdb', pooling: pooling, url: connection.replace('textdbhttp:', 'ws:').replace('textdbhttps:', 'wss:'), onerror: onerror, type: 'textdb' };
+			var index = connection.indexOf('?token=');
+			var token = connection.substring(index + 7);
+			CONN[name] = { id: name, db: 'textdb', pooling: pooling, url: connection.replace('textdbhttp:', 'http:').replace('textdbhttps:', 'https:'), token: token, onerror: onerror, type: 'textdb' };
 			break;
 	}
 
