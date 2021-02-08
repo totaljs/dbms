@@ -6,7 +6,7 @@ const REG_ESCAPE_2 = /\\/g;
 const REG_PARAMS = /\$\d/g;
 const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
-const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1 };
+const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1, '#': 1 };
 const CANSTATS = global.F ? (global.F.stats && global.F.stats.performance && global.F.stats.performance.dbrm != null) : false;
 
 // Convertor: Numeric to number
@@ -318,6 +318,8 @@ function insert(client, cmd) {
 				key = key.substring(1);
 				raw = true;
 				break;
+			case '#':
+				continue;
 			case '!':
 				// toggle
 				key = key.substring(1);
@@ -449,6 +451,7 @@ function modify(client, cmd) {
 				type = '"' + key + '"=NOT ' + key;
 				break;
 			case '=':
+			case '#':
 				// raw
 				type = '"' + key.substring(1) + '"=' + val;
 				break;
