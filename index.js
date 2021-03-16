@@ -258,13 +258,21 @@ DP.next = function() {
 				self.$commands = null;
 
 				if (self.$callback) {
-					self.$callback(self.$errors, null);
-					self.$callback = null;
+					try {
+						self.$callback(self.$errors, null);
+						self.$callback = null;
+					} catch (e) {
+						self.unexpected(e);
+					}
 				}
 
 				if (self.$callbackno) {
-					self.$callbackno(self.$errors, self.$callbacknoparam);
-					self.$callbacknoparam = self.$callbackno = null;
+					try {
+						self.$callbackno(self.$errors, self.$callbacknoparam);
+						self.$callbacknoparam = self.$callbackno = null;
+					} catch (e) {
+						self.unexpected(e);
+					}
 				}
 
 				self.forcekill();
@@ -327,16 +335,25 @@ DP.next = function() {
 				self.$commands = null;
 
 				if (self.$callback) {
-					self.$callback(self.$errors, null);
-					self.$callback = null;
+					try {
+						self.$callback(self.$errors, null);
+						self.$callback = null;
+					} catch (e) {
+						self.unexpected(e);
+					}
 				}
 
 				if (self.$callbackno) {
-					self.$callbackno(self.$errors, self.$callbacknoparam);
-					self.$callbacknoparam = self.$callbackno = null;
+					try {
+						self.$callbackno(self.$errors, self.$callbacknoparam);
+						self.$callbacknoparam = self.$callbackno = null;
+					} catch (e) {
+						self.unexpected(e);
+					}
 				}
 
 				self.forcekill();
+
 			} else
 				setImmediate(self.$next);
 		} else {
@@ -394,6 +411,11 @@ DP.next = function() {
 	}
 
 	return self;
+};
+
+DP.unexpected = function(e) {
+	this.forcekill();
+	throw e;
 };
 
 DP.forcekill = function() {
@@ -928,12 +950,22 @@ QB.$callback = function(err, value, count, iscache) {
 	}
 
 	if (err) {
-		opt.callback && opt.callback(err, value, count);
+
+		try {
+			opt.callback && opt.callback(err, value, count);
+		} catch (e) {
+			self.db.unexpected(e);
+		}
+
 		self.db.$errors.push(err);
 		self.db.$lastoutput = null;
 		self.db.$outputall[opt.table] = null;
 		if (opt.callbackno) {
-			opt.callbackno(err, opt.callbacknoparam);
+			try {
+				opt.callbackno(err, opt.callbacknoparam);
+			} catch (e) {
+				self.db.unexpected(e);
+			}
 			opt.callbacknoparam = opt.callbackno = null;
 		}
 		self.db.$lasterror = err;
@@ -980,12 +1012,28 @@ QB.$callback = function(err, value, count, iscache) {
 			}
 		}
 
-		opt.callback && opt.callback(ok ? null : opt.validate, value, count);
+		if (opt.callback) {
+			try {
+				opt.callback(ok ? null : opt.validate, value, count);
+			} catch (e) {
+				self.db.unexpected(e);
+			}
+		}
 
-		if (ok)
-			opt.callbackok && opt.callbackok(value, opt.callbackokparam);
-		else if (opt.callbackno) {
-			opt.callbackno(opt.validate, opt.callbacknoparam);
+		if (ok) {
+			if (opt.callbackok) {
+				try {
+					opt.callbackok(value, opt.callbackokparam);
+				} catch (e) {
+					self.db.unexpected(e);
+				}
+			}
+		} else if (opt.callbackno) {
+			try {
+				opt.callbackno(opt.validate, opt.callbacknoparam);
+			} catch (e) {
+				self.db.unexpected(e);
+			}
 			opt.callbackno = opt.callbacknoparam = null;
 		}
 
