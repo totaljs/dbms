@@ -172,8 +172,18 @@ DP.done = function($, callback, param) {
 
 DP.callback = function(fn) {
 	var self = this;
-	self.$callback = fn;
-	return self;
+
+	if (typeof(fn) === 'function') {
+		self.$callback = fn;
+		return self;
+	} else {
+		self.$ = fn;
+		return new Promise(function(resolve, reject) {
+			self.$resolve = resolve;
+			self.$reject = reject;
+		});
+	}
+
 };
 
 DP.data = function(fn, param) {
@@ -268,6 +278,11 @@ DP.next = function() {
 			if (self.$errors.length) {
 				self.$commands = null;
 
+				if (self.$) {
+					self.$.invalid(self.$errors);
+					self.$ = null;
+				}
+
 				if (self.$callback) {
 					try {
 						self.$callback(self.$errors, null);
@@ -345,6 +360,11 @@ DP.next = function() {
 
 				self.$commands = null;
 
+				if (self.$) {
+					self.$.invalid(self.$errors);
+					self.$ = null;
+				}
+
 				if (self.$callback) {
 					try {
 						self.$callback(self.$errors, null);
@@ -403,9 +423,27 @@ DP.next = function() {
 		self.forcekill();
 		var err = self.$eb ? self.$errors.items.length > 0 ? self.$errors : null : self.$errors.length > 0 ? self.$errors : null;
 
+		if (self.$) {
+			if (err)
+				self.$.invalid(err);
+			else {
+				try {
+					self.$resolve(self.$output);
+				} catch (e) {
+					self.unexpected(e);
+				}
+			}
+			self.$reject = self.$resolve = null;
+			self.$ = null;
+		}
+
 		if (self.$callback) {
-			self.$callback(err, self.$output);
-			self.$callback = null;
+			try {
+				self.$callback(err, self.$output);
+				self.$callback = null;
+			} catch (e) {
+				self.unexpected(e);
+			}
 		}
 
 		if (err) {
@@ -962,6 +1000,11 @@ QB.$callback = function(err, value, count, iscache) {
 
 	if (err) {
 
+		if (!self.$joinmeta && self.$) {
+			self.$.invalid(err);
+			self.$ = null;
+		}
+
 		try {
 			opt.callback && opt.callback(err, value, count);
 		} catch (e) {
@@ -1021,6 +1064,20 @@ QB.$callback = function(err, value, count, iscache) {
 					}
 				}
 			}
+		}
+
+		if (!self.$joinmeta && self.$) {
+			err = ok ? null : opt.validate;
+			if (err)
+				self.$.invalid(err);
+			else {
+				try {
+					self.$resolve(value);
+				} catch (e) {
+					self.db.unexpected(e);
+				}
+			}
+			self.$reject = self.$resolve = null;
 		}
 
 		if (opt.callback) {
@@ -1330,16 +1387,34 @@ QB.paginate = function(page, limit, maxlimit) {
 };
 
 QB.callback = function(callback) {
+
 	var self = this;
 
 	// Because of JOINS
+	if (self.$ && self.$joinmeta && self.$joinmeta.owner && !self.$joinmeta.promise) {
+		self.$joinmeta.promise = true;
+		self.$joinmeta.owner.$ = self.$;
+		self.$joinmeta.owner.$resolve = self.$resolve;
+		self.$joinmeta.owner.$reject = self.$reject;
+	}
+
 	if (self.options.callback && self.$joinmeta && self.$joinmeta.owner && !self.$joinmeta.callback) {
 		self.$joinmeta.callback = true;
 		self.$joinmeta.owner.options.callback = self.options.callback;
 	}
 
-	self.options.callback = callback;
-	return self;
+	if (typeof(callback) === 'function') {
+		self.options.callback = callback;
+		return self;
+	}
+
+	self.$ = callback;
+
+	return new Promise(function(resolve, reject) {
+		self.$resolve = resolve;
+		self.$reject = reject;
+	});
+
 };
 
 QB.done = function($, callback, param) {
