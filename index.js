@@ -14,13 +14,24 @@ var FIELDS = {};
 var auditwriter;
 
 function promise(fn) {
+
 	var self = this;
+	var $;
+
+	if (fn && typeof(fn) === 'object') {
+		$ = fn;
+		fn = null;
+	}
+
 	return new Promise(function(resolve, reject) {
 		self.callback(function(err, result) {
-			if (err)
-				reject(err);
-			else
-				resolve(fn == null ? result : fn(result));
+			if (err) {
+				if ($)
+					$.invalid(err);
+				else
+					reject(err);
+			} else
+				resolve(fn ? fn(result) : result);
 		});
 	});
 }
