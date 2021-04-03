@@ -31,7 +31,7 @@ function select(client, cmd) {
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
 	conn.find().assign(data).callback(function(err, response, meta) {
 
@@ -69,7 +69,7 @@ function check(client, cmd) {
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
 	conn.one().assign(data).callback(function(err, response, meta) {
 		builder.db.busy = false;
@@ -97,9 +97,9 @@ function query(client, cmd) {
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db);
 
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
-	conn.find().assing(data).callback(function(err, response, meta) {
+	conn.find().assign(data).callback(function(err, response, meta) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		builder.$callback(err, response, meta.count);
@@ -145,9 +145,9 @@ function scalar(client, cmd) {
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
-	conn.find().assing(data).callback(function(err, response, meta) {
+	conn.find().assign(data).callback(function(err, response, meta) {
 
 		builder.db.busy = false;
 
@@ -235,7 +235,7 @@ function insert(client, cmd) {
 	var data = {};
 	data.payload = doc;
 
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
 	conn.insert().assign(data).callback(function(err, response) {
 		builder.db.busy = false;
@@ -259,7 +259,7 @@ function insertexists(client, cmd) {
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, data);
 
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
 	conn.one().assign(data).callback(function(err, response) {
 		builder.db.busy = false;
@@ -374,7 +374,7 @@ function modify(client, cmd) {
 
 	data.db = opt.table;
 
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
 	conn.update().assign(data).callback(function(err, response, meta) {
 		cmd.builder.db.busy = false;
@@ -406,7 +406,7 @@ function remove(client, cmd) {
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
 
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
 	conn.remove().assign(data).callback(function(err, response, meta) {
 		cmd.builder.db.busy = false;
