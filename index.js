@@ -1863,6 +1863,11 @@ exports.init = function(name, connection, onerror) {
 		return exports;
 	}
 
+	if (connection === 'textdb') {
+		CONN[name] = { db: 'textdb' };
+		return exports;
+	}
+
 	var opt = Url.parse(connection);
 	var q = Qs.parse(opt.query);
 	var tmp = {};
@@ -1899,6 +1904,9 @@ exports.init = function(name, connection, onerror) {
 		case 'mongodb:':
 		case 'mongo:':
 			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database, onerror: onerror, type: 'mongodb' };
+			break;
+		case 'textdb:':
+			CONN[name] = { id: name, db: 'textdb', options: connection, table: opt.host, database: opt.host, onerror: onerror, type: 'textdb' };
 			break;
 		case 'textdbhttp:':
 		case 'textdbhttps:':

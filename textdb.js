@@ -1,6 +1,8 @@
-const EMPTYARRAY = [];
 const BLACKLIST = { dbms: 1 };
-const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1 };
+const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1, '#': 1 };
+const TextDB = require('total4/textdb-new');
+
+var INSTANCES = {};
 
 function select(client, cmd) {
 
@@ -11,32 +13,31 @@ function select(client, cmd) {
 
 	// opt.table
 	var data = {};
-	data.command = cmd.type === 'list' ? 'list' : 'find';
-	data.builder = {};
 
 	if (fields)
-		data.builder.fields = fields;
+		data.fields = fields;
 
-	data.builder.filter = filter.filter;
-	data.builder.filterarg = { arg: filter.arg };
+	data.filter = filter.filter;
+	data.filterarg = { arg: filter.arg };
 
 	if (filter.sort)
-		data.builder.sort = filter.sort;
+		data.sort = filter.sort;
 
 	if (filter.take)
-		data.builder.take = filter.take;
+		data.take = filter.take;
 
 	if (filter.skip)
-		data.builder.skip = filter.skip;
+		data.skip = filter.skip;
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
-	// builder.db.$debug && builder.db.$debug(q);
 
-	data.db = opt.table;
-	client.$opt.ws.senddata(data, function(err, response) {
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+
+	conn.find().assign(data).callback(function(err, response, meta) {
+
 		builder.db.busy = false;
 
-		var rows = response.output;
+		var rows = response;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
 
 		if (opt.first)
@@ -46,10 +47,8 @@ function select(client, cmd) {
 		if (!err && builder.$joins) {
 			client.$dbms._joins(rows, builder);
 			setImmediate(builder.db.$next);
-		} else {
-			builder.$callback(err, rows, response.count);
-		}
-
+		} else
+			builder.$callback(err, rows, meta.count);
 	});
 }
 
@@ -59,27 +58,24 @@ function check(client, cmd) {
 	var filter = WHERE(builder);
 	var data = {};
 
-	data.command = 'find2';
-	data.builder = {};
-	data.builder.filter = filter.filter;
-	data.builder.filterarg = { arg: filter.arg };
-	data.builder.take = 1;
+	data.filter = filter.filter;
+	data.filterarg = { arg: filter.arg };
+	data.take = 1;
+	data.limit = 1;
 
 	if (!cmd.value && builder.options.params)
 		cmd.value = [];
 
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
-	data.db = opt.table;
 
-	client.$opt.ws.senddata(data, function(err, response) {
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+
+	conn.one().assign(data).callback(function(err, response, meta) {
 		builder.db.busy = false;
-		var output = response.output;
-		var is = false;
-		if (output && output.length)
-			is = true;
+		var is = !err && !!response;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, is);
+		builder.$callback(err, is, meta.count);
 	});
 }
 
@@ -101,12 +97,12 @@ function query(client, cmd) {
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db);
 
-	data.db = opt.table;
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
 
-	client.$opt.ws.senddata(data, function(err, response) {
+	conn.find().assing(data).callback(function(err, response, meta) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, response.output, response.count);
+		builder.$callback(err, response, meta.count);
 	});
 }
 
@@ -118,10 +114,8 @@ function scalar(client, cmd) {
 	var data = {};
 	var filter = WHERE(builder);
 
-	data.command = 'find';
-	data.builder = {};
-	data.builder.filter = filter.filter;
-	data.builder.filterarg = { arg: filter.arg };
+	data.filter = filter.filter;
+	data.filterarg = { arg: filter.arg };
 
 	switch (cmd.scalar) {
 		case 'avg':
@@ -145,25 +139,28 @@ function scalar(client, cmd) {
 			break;
 	}
 
-	data.builder.scalar = scalar;
-	data.builder.scalararg = {};
-	data.db = opt.table;
+	data.scalar = scalar;
+	data.scalararg = {};
 
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
 
-	client.$opt.ws.senddata(data, function(err, response) {
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+
+	conn.find().assing(data).callback(function(err, response, meta) {
 
 		builder.db.busy = false;
 
-		var value = response.output;
+		var value = response.value;
+
+		/*
 		if (response) {
 			if (cmd.scalar === 'avg')
 				value = (value / response.counter).fixed(3);
-		}
+		}*/
 
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, value, response.count);
+		builder.$callback(err, value, meta.count);
 	});
 }
 
@@ -217,6 +214,8 @@ function insert(client, cmd) {
 			case '=':
 				key = key.substring(1);
 				break;
+			case '#':
+				break;
 			case '!':
 				// toggle
 				key = key.substring(1);
@@ -234,14 +233,14 @@ function insert(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db);
 
 	var data = {};
-	data.command = 'insert';
-	data.builder = {};
-	data.builder.payload = doc;
-	data.db = opt.table;
-	client.$opt.ws.senddata(data, function(err, response) {
+	data.payload = doc;
+
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+
+	conn.insert().assign(data).callback(function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, err == null ? response.output : 0);
+		builder.$callback(err, err == null ? response : 0);
 	});
 }
 
@@ -252,20 +251,20 @@ function insertexists(client, cmd) {
 	var filter = WHERE(cmd.builder);
 	var data = {};
 
-	data.command = 'find2';
-	data.builder = {};
-	data.builder.fields = 'none';
-	data.builder.take = 1;
-	data.builder.filter = filter.filter;
-	data.builder.filterarg = { arg: filter.arg };
+	data = {};
+	data.take = 1;
+	data.filter = filter.filter;
+	data.filterarg = { arg: filter.arg };
+	data.limit = 1;
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, data);
-	data.db = opt.table;
-	client.$opt.ws.senddata(data, function(err, response) {
+
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+
+	conn.one().assign(data).callback(function(err, response) {
 		builder.db.busy = false;
-		var rows = response.output;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		if (rows.length)
+		if (response)
 			builder.$callback(err, 0);
 		else
 			insert(client, cmd);
@@ -339,6 +338,7 @@ function modify(client, cmd) {
 				builder.push('doc.' + key + '=!doc.' + key);
 				break;
 			case '=':
+			case '#':
 				// raw
 				builder.push('doc.' + key + '=' + push(arr, val));
 				break;
@@ -358,33 +358,34 @@ function modify(client, cmd) {
 	var filter = WHERE(cmd.builder);
 	var data = {};
 
-	data.command = 'update';
-	data.builder = {};
-	data.builder.filter = filter.filter;
-	data.builder.filterarg = { arg: filter.arg };
-	data.builder.modify = builder.join(';');
-	data.builder.modifyarg = { arg: arr };
+	data.filter = filter.filter;
+	data.filterarg = { arg: filter.arg };
+	data.modify = builder.join(';');
+	data.modifyarg = { arg: arr };
 
 	if (filter.take)
-		data.builder.take = filter.take;
+		data.take = filter.take;
 
 	if (filter.skip)
-		data.builder.skip = filter.skip;
+		data.skip = filter.skip;
 
 	cmd.builder.db.$debug && cmd.builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'update', data);
 
 	data.db = opt.table;
-	client.$opt.ws.senddata(data, function(err, response) {
+
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+
+	conn.update().assign(data).callback(function(err, response, meta) {
 		cmd.builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		if (!response.output && cmd.insert) {
+		if (!response && cmd.insert) {
 			if (cmd.insert !== true)
 				cmd.builder.value = cmd.insert;
 			cmd.builder.options.insert && cmd.builder.options.insert(cmd.builder.value, cmd.builder.options.insertparams);
 			insert(client, cmd);
 		} else
-			cmd.builder.$callback(err, response.output, response.count);
+			cmd.builder.$callback(err, response, meta.count);
 	});
 }
 
@@ -393,25 +394,24 @@ function remove(client, cmd) {
 	var opt = cmd.builder.options;
 	var filter = WHERE(builder);
 	var data = {};
-	data.command = 'remove';
-	data.builder = {};
-	data.builder.filter = filter.filter;
-	data.builder.filterarg = { arg: filter.arg };
+	data.filter = filter.filter;
+	data.filterarg = { arg: filter.arg };
 
 	if (filter.take)
-		data.builder.take = filter.take;
+		data.take = filter.take;
 
 	if (filter.skip)
-		data.builder.skip = filter.skip;
+		data.skip = filter.skip;
 
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
 
-	data.db = opt.table;
-	client.$opt.ws.senddata(data, function(err, response) {
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(opt.table));
+
+	conn.remove().assign(data).callback(function(err, response, meta) {
 		cmd.builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		cmd.builder.$callback(err, response.output, response.count);
+		cmd.builder.$callback(err, response, meta.count);
 	});
 }
 
@@ -489,127 +489,11 @@ function clientcommand(cmd, client) {
 	}
 }
 
-function makesocket(options) {
-
-	options.ws = {};
-	options.ws.senddata = function(data, callback) {
-		var opt = {};
-		opt.url = options.url;
-		opt.headers = {};
-		opt.headers['x-textdb-database'] = data.db;
-		opt.headers['x-textdb-token'] = options.token;
-		delete data.db;
-		opt.body = JSON.stringify(data);
-		opt.keepalive = true;
-		opt.method = 'POST';
-		opt.type = 'json';
-		opt.callback = function(err, response) {
-			if (!err && response.status > 200)
-				err = response.status;
-			response.body = response.body.parseJSON(true);
-			if (!response.body)
-				response.body = { output: null, count: 0 };
-			callback(err, response.body);
-		};
-		REQUEST(opt);
-	};
-
-	return;
-
-/*
-	WEBSOCKETCLIENT(function(client) {
-
-		var autocloseid;
-
-		// client.options.compress = false;
-		client.options.reconnect = 3000;
-		client.options.encodedecode = false;
-		client.options.reconnectserver = true;
-
-		client.connect(opt.url);
-		client.on('open', function() {
-			opt.ws = client;
-			client.callbacks = {};
-			client.msgcounter = 1;
-			client.pending = 0;
-			client.senddata = function(data, callback) {
-
-				autocloseid && clearTimeout(autocloseid);
-
-				data.id = client.msgcounter++;
-				client.pending++;
-
-				if (callback)
-					client.callbacks[data.id] = callback;
-
-				client.send(data);
-			};
-		});
-
-		client.on('error', function(e) {
-			var err = 'TextDB connection error: ' + (e + '');
-			opt.onerror && opt.onerror(err);
-		});
-
-		client.on('close', function(e) {
-
-			var err;
-
-			if (e) {
-				err = 'TextDB connection error: ' + e;
-				opt.onerror && opt.onerror(err);
-			}
-
-			if (client.callbacks) {
-				var keys = Object.keys(client.callbacks);
-				for (var i = 0; i < keys.length; i++) {
-					var cb = client.callbacks[keys[i]];
-					cb && cb(err);
-				}
-
-				client.callbacks = null;
-			}
-			opt.is = false;
-			opt.ws = null;
-		});
-
-		var closeforce = function() {
-			client.close();
-		};
-
-		client.on('message', function(message) {
-			client.pending--;
-			var cb = client.callbacks[message.id];
-			if (cb) {
-				cb(message.err, message.response);
-				delete client.callbacks[message.id];
-			}
-			if (!opt.pooling && !client.pending) {
-				autocloseid && clearTimeout(autocloseid);
-				autocloseid = setTimeout(closeforce, 100);
-			}
-		});
-
-	});*/
-}
-
 exports.run = function(opt, self, cmd) {
-
 	self.$op = null;
 	self.busy = true;
 	self.$opt = opt;
-
-	if (!opt.is) {
-		// socket
-		opt.is = true;
-		makesocket(opt);
-		setTimeout(exports.run, 500, opt, self, cmd);
-	} else {
-		if (opt.ws)
-			clientcommand(cmd, self);
-		else
-			setTimeout(exports.run, 500, opt, self, cmd);
-	}
+	clientcommand(cmd, opt);
 };
 
 function push(arr, value) {
@@ -620,7 +504,7 @@ function WHERE(builder) {
 
 	var condition = [];
 	var sort = '';
-	var op = 'AND';
+	var op = '&&';
 	var opuse = false;
 	var arg = [];
 
