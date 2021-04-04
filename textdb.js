@@ -86,19 +86,14 @@ function query(client, cmd) {
 	var filter = WHERE(builder);
 	var data = {};
 
-	data.command = 'find';
-	data.builder = {};
-	data.builder.filter = cmd.query + (filter.filter ? ('&&' + filter.filter) : '');
-	data.builder.filterarg = cmd.value || {};
-	data.builder.filterarg.arg = filter.arg;
-
-	if (!cmd.value && builder.options.params)
-		cmd.value = [];
+	data.filter = filter.filter;
+	data.filterarg = { arg: filter.arg };
+	data.scalar = cmd.query;
+	data.scalararg = cmd.value || {};
 
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db);
-
-	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
+	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table || opt.db] = TextDB.TextDB(PATH.databases(opt.table || opt.db)));
 
 	conn.find().assign(data).callback(function(err, response, meta) {
 		builder.db.busy = false;
@@ -121,10 +116,12 @@ function scalar(client, cmd) {
 	data.scalararg = {};
 
 	var name = cmd.name;
-	var index = name.indexOf(' as ');
-	if (index !== -1) {
-		name = name.substring(index + 4);
-		cmd.name = cmd.name.substring(0, index);
+	if (name) {
+		var index = name.indexOf(' as ');
+		if (index !== -1) {
+			name = name.substring(index + 4);
+			cmd.name = cmd.name.substring(0, index);
+		}
 	}
 
 	switch (cmd.scalar) {
@@ -133,7 +130,7 @@ function scalar(client, cmd) {
 			break;
 		default:
 			// min, max, sum, count
-			data.scalar = 'if (doc.{0}!=null){tmp.val=doc.{0};arg.count+=1;arg.min=arg.min==null?tmp.val:arg.min>tmp.val?tmp.val:arg.min;arg.max=arg.max==null?tmp.val:arg.max<tmp.val?tmp.val:arg.max;if (!(tmp.val instanceof Date))arg.sum+=tmp.val}'.format(cmd.name);
+			data.scalar = cmd.name ? 'if (doc.{0}!=null){tmp.val=doc.{0};arg.count+=1;arg.min=arg.min==null?tmp.val:arg.min>tmp.val?tmp.val:arg.min;arg.max=arg.max==null?tmp.val:arg.max<tmp.val?tmp.val:arg.max;if (!(tmp.val instanceof Date))arg.sum+=tmp.val}'.format(cmd.name) : 'if (doc){arg.count+=1}';
 			data.scalararg.count = 0;
 			data.scalararg.sum = 0;
 			break;
@@ -343,7 +340,7 @@ function modify(client, cmd) {
 			case '=':
 			case '#':
 				// raw
-				builder.push('doc.' + key + '=' + push(arr, val));
+				builder.push('doc.' + key + '=' + val);
 				break;
 			default:
 				builder.push('doc.' + key + '=' + push(arr, val));
@@ -524,35 +521,64 @@ function WHERE(builder) {
 					cmd.compare = '!=';
 				else if (cmd.compare === '=')
 					cmd.compare = '==';
+
 				if (cmd.value === undefined)
 					condition.push(cmd.name);
-				else
-					condition.push('doc.' + cmd.name + cmd.compare + push(arg, cmd.value));
+				else {
+					var tmp = push(arg, cmd.value);
+					condition.push('doc.' + cmd.name + ' instanceof Array?(doc.' + cmd.name + '.indexOf(' + tmp + ')' + (cmd.compare === '==' ? '!=' : '==') + '-1):(doc.' + cmd.name + cmd.compare + tmp + ')');
+				}
+
 				break;
 			case 'custom':
 				cmd.fn.call(builder, builder, builder.db.$output, builder.db.$lastoutput);
 				break;
 			case 'in':
+
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
+
 				if (cmd.value instanceof Array) {
+
+					if (cmd.field) {
+						var tmp = [];
+						for (var j = 0; j < cmd.value.length; j++) {
+							if (cmd.value[j])
+								tmp.push(cmd.value[j][cmd.field]);
+						}
+						cmd.value = tmp;
+					}
+
 					opuse && condition.length && condition.push(op);
 					condition.push(push(arg, cmd.value) + '.indexOf(doc.' + cmd.name + ')!==-1');
 				} else {
 					opuse && condition.length && condition.push(op);
-					condition.push('doc.' + cmd.name + '==' + push(arg, cmd.value));
+					condition.push('doc.' + cmd.name + '==' + push(arg, cmd.field ? cmd.value[cmd.field] : cmd.value));
 				}
 				break;
 			case 'notin':
+
 				if (typeof(cmd.value) === 'function')
 					cmd.value = cmd.value();
+
 				if (cmd.value instanceof Array) {
+
+					if (cmd.field) {
+						var tmp = [];
+						for (var j = 0; j < cmd.value.length; j++) {
+							if (cmd.value[j])
+								tmp.push(cmd.value[j][cmd.field]);
+						}
+						cmd.value = tmp;
+					}
+
 					opuse && condition.length && condition.push(op);
 					condition.push(push(arg, cmd.value) + '.indexOf(doc.' + cmd.name + ')===-1');
 				} else {
 					opuse && condition.length && condition.push(op);
-					condition.push('doc.' + cmd.name + '!=' + push(arg, cmd.value));
+					condition.push('doc.' + cmd.name + '!=' + push(arg, cmd.field ? cmd.value[cmd.field] : cmd.value));
 				}
+
 				break;
 			case 'between':
 				opuse && condition.length && condition.push(op);
@@ -589,7 +615,7 @@ function WHERE(builder) {
 				break;
 			case 'query':
 				opuse && condition.length && condition.push(op);
-				condition.push(cmd.value);
+				condition.push(cmd.query);
 				break;
 			case 'permit':
 				break;

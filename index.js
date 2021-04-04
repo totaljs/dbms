@@ -393,6 +393,11 @@ DP.next = function() {
 				cmd.value = cmd.value.$clean();
 
 			var conn = CONN[cmd.conn || cmd.builder.options.db];
+
+			// Due to TextDB.query()
+			if (!conn)
+				conn = CONN.default;
+
 			if (conn) {
 				if (self.$cachekey) {
 					exports.cache_get(self.$cachekey, cmd.builder.options.assign || 'default', function(err, cache) {
