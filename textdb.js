@@ -116,31 +116,20 @@ function scalar(client, cmd) {
 
 	data.filter = filter.filter;
 	data.filterarg = { arg: filter.arg };
-
-	switch (cmd.scalar) {
-		case 'avg':
-			scalar = 'arg.value=(arg.value||0)+doc.' + cmd.name;
-			break;
-		case 'min':
-			scalar = 'if (arg.value==null||doc.' + cmd.name + '<arg.value)arg.value=doc.' + cmd.name;
-			break;
-		case 'sum':
-			scalar = 'arg.value=(arg.value||0)+doc.' + cmd.name;
-			break;
-		case 'max':
-			scalar = 'if (arg.value==null||doc.' + cmd.name + '>arg.value)arg.value=doc.' + cmd.name;
-			break;
-		case 'count':
-			scalar = 'arg.value=(arg.value||0)+1';
-			break;
-		case 'group':
-			// @TODO: missing
-			// scalar = 'if(!arg.value)arg.value={};if(arg.value[{0}])'
-			break;
-	}
-
 	data.scalar = scalar;
 	data.scalararg = {};
+
+	switch (cmd.scalar) {
+		case 'group':
+			data.scalar = 'var k=doc.{0}+\'\';if (arg[k]){arg[k]++}else{arg[k]=1}'.format(cmd.name);
+			break;
+		default:
+			// min, max, sum, count
+			data.scalar = 'if (doc.{0}!=null){tmp.val=doc.{0};arg.count+=1;arg.min=arg.min==null?tmp.val:arg.min>tmp.val?tmp.val:arg.min;arg.max=arg.max==null?tmp.val:arg.max<tmp.val?tmp.val:arg.max;if (!(tmp.val instanceof Date))arg.sum+=tmp.val}'.format(cmd.name);
+			data.scalararg.count = 0;
+			data.scalararg.sum = 0;
+			break;
+	}
 
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
@@ -151,16 +140,21 @@ function scalar(client, cmd) {
 
 		builder.db.busy = false;
 
-		var value = response.value;
+		var output;
 
-		/*
-		if (response) {
-			if (cmd.scalar === 'avg')
-				value = (value / response.counter).fixed(3);
-		}*/
+		if (cmd.scalar === 'group') {
+			output = [];
+			for (var key in response) {
+				var obj = {};
+				obj[cmd.name] = key;
+				obj.count = response[key];
+				output.push(obj);
+			}
+		} else
+			output = cmd.scalar === 'avg' ? (response[cmd.scalar].max / response[cmd.scalar].min) : response[cmd.scalar];
 
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
-		builder.$callback(err, value, meta.count);
+		builder.$callback(err, output, meta.count);
 	});
 }
 
