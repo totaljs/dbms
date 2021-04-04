@@ -62,6 +62,7 @@ function check(client, cmd) {
 	data.filterarg = { arg: filter.arg };
 	data.take = 1;
 	data.limit = 1;
+	data.first = true;
 
 	if (!cmd.value && builder.options.params)
 		cmd.value = [];
@@ -71,7 +72,7 @@ function check(client, cmd) {
 
 	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
-	conn.one().assign(data).callback(function(err, response, meta) {
+	conn.find().assign(data).callback(function(err, response, meta) {
 		builder.db.busy = false;
 		var is = !err && !!response;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
@@ -119,6 +120,13 @@ function scalar(client, cmd) {
 	data.scalar = scalar;
 	data.scalararg = {};
 
+	var name = cmd.name;
+	var index = name.indexOf(' as ');
+	if (index !== -1) {
+		name = name.substring(index + 4);
+		cmd.name = cmd.name.substring(0, index);
+	}
+
 	switch (cmd.scalar) {
 		case 'group':
 			data.scalar = 'var k=doc.{0}+\'\';if (arg[k]){arg[k]++}else{arg[k]=1}'.format(cmd.name);
@@ -146,7 +154,7 @@ function scalar(client, cmd) {
 			output = [];
 			for (var key in response) {
 				var obj = {};
-				obj[cmd.name] = key;
+				obj[name] = key;
 				obj.count = response[key];
 				output.push(obj);
 			}
@@ -250,12 +258,13 @@ function insertexists(client, cmd) {
 	data.filter = filter.filter;
 	data.filterarg = { arg: filter.arg };
 	data.limit = 1;
+	data.first = true;
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, data);
 
 	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
-	conn.one().assign(data).callback(function(err, response) {
+	conn.find().assign(data).callback(function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, data);
 		if (response)
