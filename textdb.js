@@ -589,7 +589,7 @@ function WHERE(builder) {
 				break;
 			case 'query':
 				opuse && condition.length && condition.push(op);
-				// condition.push('(' + (current == undefined ? cmd.query : cmd.query.replace(REG_PARAMS, replace)) + ')');
+				condition.push(cmd.value);
 				break;
 			case 'permit':
 				break;
@@ -602,8 +602,13 @@ function WHERE(builder) {
 			case 'day':
 			case 'hour':
 			case 'minute':
-				// opuse && condition.length && condition.push(op);
-				// condition.push('EXTRACT(' + cmd.type + ' from ' + cmd.name + ')' + cmd.compare + ESCAPE(cmd.value));
+				opuse && condition.length && condition.push(op);
+				var type = cmd.type === 'month' ? 'Month' : cmd.type === 'year' ? 'FullYear' : cmd.type === 'day' ? 'Date' : cmd.type === 'minute' ? 'Minutes' : cmd.type === 'hours' ? 'Hours' : 'Seconds';
+				condition.push('doc.' + cmd.name + ' instanceof Date?(doc.' + cmd.name + '.get' + type + '()===' + cmd.value + '):false');
+				break;
+			case 'date':
+				opuse && condition.length && condition.push(op);
+				condition.push(cmd.value instanceof Date ? ('doc.' + cmd.name + ' instanceof Date?(doc.' + cmd.name + '.getDate()===' + cmd.value.getDate() + '&&doc.' + cmd.name + '.getMonth()===' + cmd.value.getMonth() + '&&doc.' + cmd.name + '.getFullYear()===' + cmd.value.getFullYear() + '):false') : ('!doc.' + cmd.name));
 				break;
 			case 'or':
 				opuse && condition.length && condition.push(op);

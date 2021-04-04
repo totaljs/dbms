@@ -1661,6 +1661,22 @@ QB.minute = function(name, compare, value) {
 	return self;
 };
 
+QB.date = function(name, compare, value) {
+
+	if (value === undefined) {
+		value = compare;
+		compare = '=';
+	} else {
+		compare = COMPARE[compare];
+		if (compare == null)
+			throw new Error('DBMS: comparer "' + compare + '" is not supported for QueryBuilder.');
+	}
+
+	var self = this;
+	self.$commands.push({ type: 'date', name: name, value: value, compare: compare });
+	return self;
+};
+
 // ORM
 QB.wait = function() {
 	var self = this;

@@ -942,6 +942,10 @@ function WHERE(builder, scalar, group, params) {
 				opuse && condition.length && condition.push(op);
 				condition.push('EXTRACT(' + cmd.type + ' from ' + cmd.name + ')' + cmd.compare + ESCAPE(cmd.value));
 				break;
+			case 'date':
+				opuse && condition.length && condition.push(op);
+				condition.push(cmd.name + '::date' + cmd.compare + cmd.value instanceof Date ? (cmd.value.format('yyyy-MM-dd') + '::date') : 'null');
+				break;
 			case 'or':
 				opuse && condition.length && condition.push(op);
 				op = 'OR';
