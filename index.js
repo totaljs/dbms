@@ -141,10 +141,19 @@ DP.debug = function() {
 
 DP.log = DP.audit = function() {
 	var arg = [];
+	var self = this;
+
 	for (var i = 0; i < arguments.length; i++)
 		arg.push(arguments[i]);
-	this.$commands.push({ type: 'audit', arg: arg });
-	return this;
+
+	self.$commands.push({ type: 'audit', arg: arg });
+
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
+
+	return self;
 };
 
 DP.invalid = function(name, err) {
