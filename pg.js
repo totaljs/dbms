@@ -226,10 +226,10 @@ function scalar(client, cmd) {
 		case 'sum':
 		case 'max':
 		case 'count':
-			q = 'SELECT ' + cmd.scalar.toUpperCase() + (cmd.scalar !== 'count' ? ('(' + cmd.name + ')') : '(1)') + '::int as dbmsvalue FROM ' + opt.table;
+			q = 'SELECT ' + cmd.scalar.toUpperCase() + (cmd.scalar !== 'count' ? ('(' + (cmd.field || cmd.name) + ')') : '(1)') + '::int as dbmsvalue FROM ' + opt.table;
 			break;
 		case 'group':
-			q = 'SELECT ' + cmd.name + ', COUNT(1)::int as count FROM ' + opt.table;
+			q = 'SELECT ' + cmd.name + ', ' + (cmd.field ? ('SUM(' + cmd.field + ')::numeric') : 'COUNT(1)::int') + ' as count FROM ' + opt.table;
 			break;
 	}
 
@@ -245,8 +245,9 @@ function scalar(client, cmd) {
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
 
 		var rows = response ? response.rows || EMPTYARRAY : EMPTYARRAY;
-		if (cmd.scalar !== 'group')
+		if (!cmd.field && cmd.scalar !== 'group')
 			rows = rows.length ? (rows[0].dbmsvalue || 0) : 0;
+
 		builder.$callback(err, rows);
 	});
 }

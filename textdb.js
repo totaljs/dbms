@@ -126,13 +126,17 @@ function scalar(client, cmd) {
 
 	switch (cmd.scalar) {
 		case 'group':
-			data.scalar = 'var k=doc.{0}+\'\';if (arg[k]){arg[k]++}else{arg[k]=1}'.format(cmd.name);
+			data.scalar = cmd.field ? ('var k=doc.' + cmd.name + '+\'\';if (arg[k]){arg[k]+=doc.' + cmd.field + '||0}else{arg[k]=doc.' + cmd.field + '||0}') : ('var k=doc.' + cmd.name + '+\'\';if (arg[k]){arg[k]++}else{arg[k]=1}');
 			break;
 		default:
-			// min, max, sum, count
-			data.scalar = cmd.name ? 'if (doc.{0}!=null){tmp.val=doc.{0};arg.count+=1;arg.min=arg.min==null?tmp.val:arg.min>tmp.val?tmp.val:arg.min;arg.max=arg.max==null?tmp.val:arg.max<tmp.val?tmp.val:arg.max;if (!(tmp.val instanceof Date))arg.sum+=tmp.val}'.format(cmd.name) : 'if (doc){arg.count+=1}';
-			data.scalararg.count = 0;
-			data.scalararg.sum = 0;
+			if (cmd.field) {
+				data.scalar = 'var k=doc.' + cmd.name + '+\'\';if (arg[k]){tmp.bk=doc.' + cmd.field + '||0;' + (cmd.scalar === 'max' ? 'if(tmp.bk>arg[k])arg[k]=tmp.bk' : cmd.scalar === 'min' ? 'if(tmp.bk<arg[k])arg[k]=tmp.bk' : 'arg[k]+=tmp.bk') + '}else{arg[k]=doc.' + cmd.field + '||0}';
+			} else {
+				// min, max, sum, count
+				data.scalar = cmd.name ? 'if (doc.{0}!=null){tmp.val=doc.{0};arg.count+=1;arg.min=arg.min==null?tmp.val:arg.min>tmp.val?tmp.val:arg.min;arg.max=arg.max==null?tmp.val:arg.max<tmp.val?tmp.val:arg.max;if (!(tmp.val instanceof Date))arg.sum+=tmp.val}'.format(cmd.name) : 'if (doc){arg.count+=1}';
+				data.scalararg.count = 0;
+				data.scalararg.sum = 0;
+			}
 			break;
 	}
 
@@ -147,7 +151,7 @@ function scalar(client, cmd) {
 
 		var output;
 
-		if (cmd.scalar === 'group') {
+		if (cmd.field || cmd.scalar === 'group') {
 			output = [];
 			for (var key in response) {
 				var obj = {};

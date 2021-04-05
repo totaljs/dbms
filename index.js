@@ -635,7 +635,7 @@ DP.stream = function(table, limit, callback, done) {
 	return builder;
 };
 
-DP.scalar = function(table, type, name) {
+DP.scalar = function(table, type, name, field) {
 
 	// type: avg
 	// type: count
@@ -647,7 +647,7 @@ DP.scalar = function(table, type, name) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'scalar');
 	builder.table(table);
-	self.$commands.push({ type: 'scalar', builder: builder, scalar: type, name: name });
+	self.$commands.push({ type: 'scalar', builder: builder, scalar: type, name: name, field: field });
 	if (!self.busy) {
 		self.$op && clearImmediate(self.$op);
 		self.$op = setImmediate(self.$next);
