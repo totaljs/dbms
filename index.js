@@ -2424,7 +2424,7 @@ QB.autoquery = function(query, schema, defsort, maxlimit, localized) {
 			if (skipped && skipped[name])
 				continue;
 
-			if (!allowed.meta[name] && !schema.schema[name])
+			if (!allowed.meta[name])
 				continue;
 
 			self.sort(name, tmp[i][index + 1] === 'd');
