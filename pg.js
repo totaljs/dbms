@@ -790,17 +790,20 @@ function prepare_owner(cmd, condition) {
 	}
 
 	var addcondition = [];
-	var keys = cmd.condition ? Object.keys(cmd.condition) : null;
-	if (keys) {
+	if (cmd.condition) {
 		addcondition.push('');
-		for (var i = 0; i < keys.length; i++) {
-			var val = cmd.condition[keys[i]];
-			addcondition.push(keys[i] + (val == null ? ' IS ' : '=') + ESCAPE(val));
+		if (typeof(cmd.condition) === 'string') {
+			addcondition.push(val);
+		} else {
+			for (var key in cmd.condition) {
+				var val = cmd.condition[key];
+				addcondition.push(key + (val == null ? ' IS ' : '=') + ESCAPE(val));
+			}
 		}
 	}
 
 	// e.g. userid=ID OR (userid IN (ARR) (AND condition))
-	condition.push('(' + cmd.name + '=' + ESCAPE(cmd.value) + (tmp.length ? (' OR (' + cmd.name + ' IN (' + tmp.join(',') + ')' + addcondition.join(' AND ') + ')') : '') + ')');
+	condition.push('(' + cmd.name + '=' + ESCAPE(cmd.value) + (tmp.length ? (' OR (' + cmd.name + ' IN (' + tmp.join(',') + ')' + (addcondition.length ? addcondition.join(' AND ') : '') + ')') : '') + ')');
 }
 
 function WHERE(builder, scalar, group, params) {

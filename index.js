@@ -1224,7 +1224,7 @@ QB.where = function(name, compare, value) {
 
 QB.owner = function(name, value, member, condition) {
 	var self = this;
-	self.$commands.push({ type: 'owner', name: name, value: value, member: member, condition: condition });
+	self.$commands.push({ type: 'owner', name: name, value: value && value instanceof Object ? (value.user ? value.user.id : value.id) : value, member: member, condition: condition });
 	return self;
 };
 
