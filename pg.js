@@ -59,7 +59,7 @@ function select(client, cmd) {
 	var params = [];
 	var q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + WHERE(builder, null, null, params);
 
-	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 	builder.db.$debug && builder.db.$debug(q);
 
 	if (CANSTATS)
@@ -90,7 +90,7 @@ function check(client, cmd) {
 	var params = [];
 	var q = 'SELECT 1 FROM ' + opt.table + WHERE(builder, null, null, params);
 
-	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 
 	if (CANSTATS)
 		F.stats.performance.dbrm++;
@@ -117,7 +117,7 @@ function query(client, cmd) {
 	if (CANSTATS)
 		F.stats.performance.dbrm++;
 
-	F.$events.dbms && EMIT('dbms', 'query', cmd.query, opt.db);
+	F.$events.dbms && EMIT('dbms', 'query', cmd.query, opt.db, builder);
 	client.query(q, cmd.value, function(err, response) {
 		builder.db.busy = false;
 		err && client.$opt.onerror && client.$opt.onerror(err, q, builder);
@@ -153,7 +153,7 @@ function list(client, cmd) {
 	if (cmd.improved && builder.skip) {
 
 		q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
-		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 		builder.db.$debug && builder.db.$debug(q);
 		builder.db.busy = true;
 
@@ -173,7 +173,7 @@ function list(client, cmd) {
 	} else {
 		q = 'SELECT COUNT(1)::int as dbmsvalue FROM ' + opt.table + query;
 		builder.db.$debug && builder.db.$debug(q);
-		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+		F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 
 		if (CANSTATS)
 			F.stats.performance.dbrm++;
@@ -201,7 +201,7 @@ function list(client, cmd) {
 				builder.db.busy = true;
 				q = 'SELECT ' + FIELDS(builder) + ' FROM ' + opt.table + query + OFFSET(builder);
 				builder.db.$debug && builder.db.$debug(q);
-				F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+				F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 
 				if (CANSTATS)
 					F.stats.performance.dbrm++;
@@ -235,7 +235,7 @@ function scalar(client, cmd) {
 
 	q = q + WHERE(builder, false, cmd.scalar === 'group' ? cmd.name : null, params);
 	builder.db.$debug && builder.db.$debug(q);
-	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 
 	if (CANSTATS)
 		F.stats.performance.dbrm++;
@@ -344,7 +344,7 @@ function insert(client, cmd) {
 	var q = 'INSERT INTO ' + opt.table + ' (' + fields.join(',') + ') VALUES(' + values.join(',') + ')' + (builder.$primarykey ? (' RETURNING ' + builder.$primarykey) : '');
 
 	builder.db.$debug && builder.db.$debug(q);
-	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db, builder);
 
 	if (CANSTATS)
 		F.stats.performance.dbwm++;
@@ -368,7 +368,7 @@ function insertexists(client, cmd) {
 	var opt = builder.options;
 	var q = 'SELECT 1 as dbmsvalue FROM ' + opt.table + WHERE(builder);
 	builder.db.$debug && builder.db.$debug(q);
-	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 
 	if (CANSTATS)
 		F.stats.performance.dbrm++;
@@ -474,7 +474,7 @@ function modify(client, cmd) {
 
 	var q = 'WITH rows AS (UPDATE ' + opt.table + ' SET ' + fields + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
-	F.$events.dbms && EMIT('dbms', 'update', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'update', opt.table, opt.db, cmd.builder);
 
 	if (CANSTATS)
 		F.stats.performance.dbwm++;
@@ -507,7 +507,7 @@ function remove(client, cmd) {
 	var params = [];
 	var q = 'WITH rows AS (DELETE FROM ' + opt.table + WHERE(builder, true, null, params) + ' RETURNING 1) SELECT count(1)::int as dbmsvalue FROM rows';
 	builder.db.$debug && builder.db.$debug(q);
-	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db, builder);
 
 	if (CANSTATS)
 		F.stats.performance.dbwm++;

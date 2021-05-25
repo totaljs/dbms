@@ -29,7 +29,7 @@ function select(client, cmd) {
 	if (filter.skip)
 		data.skip = filter.skip;
 
-	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 
 	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
@@ -68,7 +68,7 @@ function check(client, cmd) {
 		cmd.value = [];
 
 	builder.db.$debug && builder.db.$debug(data);
-	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 
 	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
@@ -92,7 +92,7 @@ function query(client, cmd) {
 	data.scalararg = cmd.value || {};
 
 	builder.db.$debug && builder.db.$debug(data);
-	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db, builder);
 	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table || opt.db] = TextDB.TextDB(PATH.databases(opt.table || opt.db)));
 
 	conn.find().assign(data).callback(function(err, response, meta) {
@@ -141,7 +141,7 @@ function scalar(client, cmd) {
 	}
 
 	builder.db.$debug && builder.db.$debug(data);
-	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, opt.db, builder);
 
 	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
@@ -233,7 +233,7 @@ function insert(client, cmd) {
 	}
 
 	// builder.db.$debug && builder.db.$debug(q);
-	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db, builder);
 
 	var data = {};
 	data.payload = doc;
@@ -261,7 +261,7 @@ function insertexists(client, cmd) {
 	data.limit = 1;
 	data.first = true;
 
-	F.$events.dbms && EMIT('dbms', 'select', opt.table, data);
+	F.$events.dbms && EMIT('dbms', 'select', opt.table, data, builder);
 
 	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
@@ -374,7 +374,7 @@ function modify(client, cmd) {
 		data.skip = filter.skip;
 
 	cmd.builder.db.$debug && cmd.builder.db.$debug(data);
-	F.$events.dbms && EMIT('dbms', 'update', data);
+	F.$events.dbms && EMIT('dbms', 'update', data, builder);
 
 	data.db = opt.table;
 
@@ -408,7 +408,7 @@ function remove(client, cmd) {
 		data.skip = filter.skip;
 
 	builder.db.$debug && builder.db.$debug(data);
-	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db);
+	F.$events.dbms && EMIT('dbms', 'delete', opt.table, opt.db, builder);
 
 	var conn = INSTANCES[opt.table] || (INSTANCES[opt.table] = TextDB.TextDB(PATH.databases(opt.table)));
 
