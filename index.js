@@ -1133,7 +1133,7 @@ QB.$callback = function(err, value, count, iscache) {
 	}
 };
 
-QB.nobind = function() {
+QB.nobind = QB.unbind = function() {
 	this.options.nobind = true;
 	return this;
 };
