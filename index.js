@@ -1893,8 +1893,8 @@ exports.init = function(name, connection, onerror) {
 		return exports;
 	}
 
-	if (connection === 'textdb') {
-		CONN[name] = { db: 'textdb' };
+	if (connection === 'textdb' || connection === 'inmemory') {
+		CONN[name] = { db: connection };
 		return exports;
 	}
 
@@ -1935,14 +1935,11 @@ exports.init = function(name, connection, onerror) {
 		case 'mongo:':
 			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database, onerror: onerror, type: 'mongodb' };
 			break;
+		case 'inmemory':
+			CONN[name] = { id: name, db: 'inmemory', options: connection, table: opt.host, database: opt.host, onerror: onerror, type: 'textdb' };
+			break;
 		case 'textdb:':
 			CONN[name] = { id: name, db: 'textdb', options: connection, table: opt.host, database: opt.host, onerror: onerror, type: 'textdb' };
-			break;
-		case 'textdbhttp:':
-		case 'textdbhttps:':
-			var index = connection.indexOf('?token=');
-			var token = connection.substring(index + 7);
-			CONN[name] = { id: name, db: 'textdb', pooling: pooling, url: connection.replace('textdbhttp:', 'http:').replace('textdbhttps:', 'https:'), token: token, onerror: onerror, type: 'textdb' };
 			break;
 	}
 
