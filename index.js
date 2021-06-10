@@ -837,7 +837,7 @@ DP.rem = DP.remove = function(table) {
 
 DP.err = DP.error = DP.must = DP.validate = function(err, reverse) {
 	var self = this;
-	self.$commands.push({ type: 'validate', value: err, reverse: reverse });
+	self.$commands.push({ type: 'validate', value: typeof(err) === 'number' ? (err + '') : err, reverse: reverse });
 	return self;
 };
 
@@ -1504,7 +1504,7 @@ QB.join = function(field, table) {
 
 QB.err = QB.error = QB.must = QB.validate = function(err, reverse) {
 	var self = this;
-	self.options.validate = err || 'unhandled exception';
+	self.options.validate = (typeof(err) === 'number' ? (err + '') : err) || 'unhandled exception';
 	self.options.validatereverse = reverse;
 	return self;
 };
