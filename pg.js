@@ -948,7 +948,7 @@ function WHERE(builder, scalar, group, params) {
 				break;
 			case 'date':
 				opuse && condition.length && condition.push(op);
-				condition.push(cmd.name + '::date' + cmd.compare + cmd.value instanceof Date ? (cmd.value.format('yyyy-MM-dd') + '::date') : 'null');
+				condition.push(cmd.name + '::date' + cmd.compare + (cmd.value instanceof Date ? (ESCAPE(cmd.value.format('yyyy-MM-dd')) + '::date') : 'null'));
 				break;
 			case 'or':
 				opuse && condition.length && condition.push(op);
