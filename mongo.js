@@ -7,14 +7,6 @@ const BLACKLIST = { dbms: 1 };
 
 global.ObjectID = MongoDB.ObjectID;
 
-MongoDB.ObjectID.parse = function(value) {
-	try {
-		return MongoDB.ObjectID.createFromHexString(value);
-	} catch (e) {
-		return null;
-	}
-};
-
 function select(client, cmd) {
 
 	var builder = cmd.builder;
@@ -315,7 +307,7 @@ function remove(client, cmd) {
 }
 
 exports.run = function(opt, self, cmd) {
-	var client = new MongoClient(opt.options, { useNewUrlParser: true });
+	var client = new MongoClient(opt.options);
 	client.connect(function(err) {
 
 		client.$opt = opt;
@@ -371,7 +363,7 @@ exports.run = function(opt, self, cmd) {
 };
 
 exports.blob_read = function(opt, id, callback, conn) {
-	var client = new MongoClient(opt.options, { useNewUrlParser: true });
+	var client = new MongoClient(opt.options);
 
 	client.connect(function(err) {
 
@@ -387,7 +379,7 @@ exports.blob_read = function(opt, id, callback, conn) {
 
 		var done = () => client.close();
 		var bucket = new MongoDB.GridFSBucket(client.db(opt.database), BUCKETNAME);
-		var stream = bucket.openDownloadStream(typeof(id) === 'string' ? ObjectID.parse(id) : id);
+		var stream = bucket.openDownloadStream(id);
 
 		stream.on('error', done);
 		stream.on('end', done);
@@ -397,7 +389,7 @@ exports.blob_read = function(opt, id, callback, conn) {
 };
 
 exports.blob_write = function(opt, stream, name, callback, conn) {
-	var client = new MongoClient(opt.options, { useNewUrlParser: true });
+	var client = new MongoClient(opt.options);
 	client.connect(function(err) {
 
 		if (err) {
@@ -425,7 +417,7 @@ exports.blob_write = function(opt, stream, name, callback, conn) {
 };
 
 exports.blob_remove = function(opt, id, callback, conn) {
-	var client = new MongoClient(opt.options, { useNewUrlParser: true });
+	var client = new MongoClient(opt.options);
 	client.connect(function(err) {
 
 		if (err) {
