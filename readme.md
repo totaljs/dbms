@@ -1,15 +1,22 @@
 # Node Database Management System (ORM)
 
-[![Professional Support](https://www.totaljs.com/img/badge-support.svg)](https://www.totaljs.com/support/) [![Chat with contributors](https://www.totaljs.com/img/badge-chat.svg)](https://messenger.totaljs.com) [![NPM version][npm-version-image]][npm-url] [![NPM downloads][npm-downloads-image]][npm-url] [![MIT License][license-image]][license-url]
 
-- [__Documentation__](https://wiki.totaljs.com/dbms/01-welcome/)
-- installation `$ npm install dbms`
-- supports Total.js `NoSQL embedded`
-- supports `PostgreSQL` and `MongoDB`
+- [__Documentation__](https://docs.totaljs.com/dbms/)
+- [Website](https://www.totaljs.com/)
+- [__Documentation__](https://docs.totaljs.com/total4/)
+- [Chat support](https://platform.totaljs.com/?open=messenger)
+- [Join __Total.js Telegram__](https://t.me/totalplatform)
+- [Support](https://www.totaljs.com/support/)
+- supports `PostgreSQL`, `MySQL`, Total.js `TextDB` and part of `MongoDB`
 
 ## Initialization
 
-```javascript
+- installation `$ npm install dbms`
+	- install MySQL: `$ npm install mysql2`
+	- install PostgreSQL: `$ npm install pg`
+	- install MongoDB: `$ npm install mongodb`
+
+```js
 const dbms = require('dbms');
 
 dbms.init([alias], connection_string);
@@ -20,6 +27,10 @@ dbms.init([alias], connection_string);
 dbms.init('postgresql://user:pass@localhost:5432/dbname');
 dbms.init('mypg', 'postgresql://user:pass@localhost:5432/dbname'); // with a name for more DB engines
 
+// MySQL & Maria DB
+dbms.init('mysql://user:pass@localhost:3306/dbname');
+dbms.init('mysql', 'mysql://user:pass@localhost:3306/dbname'); // with a name for more DB engines
+
 // Total.js NoSQL embedded
 dbms.init('nosql');
 dbms.init('mynosql', 'nosql'); // with a name for more DB engines
@@ -29,9 +40,9 @@ dbms.init('table');
 dbms.init('mytable', 'nosql'); // with a name for more DB engines
 ```
 
-## Simple usage
+## Usage
 
-```javascript
+```js
 // Is a global method
 var db = DBMS();
 
@@ -62,13 +73,6 @@ db.insert('mytable/collection_table_name', document, [unique]);
 
 ## Contact
 
-Do you have any questions? Contact us <https://www.totaljs.com/contact/>
-
-[![Professional Support](https://www.totaljs.com/img/badge-support.svg)](https://www.totaljs.com/support/) [![Chat with contributors](https://www.totaljs.com/img/badge-chat.svg)](https://messenger.totaljs.com)
-
-[license-image]: https://img.shields.io/badge/license-MIT-blue.svg?style=flat
-[license-url]: license.txt
-
-[npm-url]: https://npmjs.org/package/sqlagent
-[npm-version-image]: https://img.shields.io/npm/v/sqlagent.svg?style=flat
-[npm-downloads-image]: https://img.shields.io/npm/dm/sqlagent.svg?style=flat
+- Contact <https://www.totaljs.com/contact/>
+- [Chat support](https://platform.totaljs.com/?open=messenger)
+- [Join to __Total.js Telegram__](https://t.me/totalplatform)

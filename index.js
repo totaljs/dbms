@@ -485,12 +485,11 @@ DP.forcekill = function() {
 	var self = this;
 	if (self.$conn) {
 		self.closed = true;
-		var keys = Object.keys(self.$conn);
-		for (var i = 0; i < keys.length; i++) {
-			var item = self.$conn[keys[i]];
+		for (var key in self.$conn) {
+			var item = self.$conn[key];
 			if (item) {
 				item.$$destroy(item);
-				self.$conn[keys[i]] = null;
+				self.$conn[key] = null;
 			}
 		}
 	}
@@ -1931,6 +1930,29 @@ exports.init = function(name, connection, onerror) {
 			require('./pg');
 
 			break;
+
+		case 'mysql:':
+		case 'mariadb:':
+			if (opt.auth) {
+				arr = opt.auth.split(':');
+				tmp.user = arr[0] || '';
+				tmp.password = arr[1] || '';
+			}
+			tmp.host = opt.hostname;
+			tmp.port = opt.port;
+			tmp.database = opt.pathname.split('/')[1];
+			tmp.ssl = q.ssl === '1' || q.ssl === 'true' || q.ssl === 'on';
+			tmp.connectionLimit = +(q.max || '4');
+			// tmp.min = +(q.min || '2');
+			tmp.waitForConnections = true;
+			tmp.pooling = pooling;
+			CONN[name] = { id: name, db: 'mysql', options: tmp, onerror: onerror, type: 'mysql' };
+
+			// Due to PG_ESCAPE
+			require('./mysql');
+
+			break;
+
 		case 'mongodb:':
 		case 'mongo:':
 			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database, onerror: onerror, type: 'mongodb' };
