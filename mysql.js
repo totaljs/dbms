@@ -5,6 +5,7 @@ const BLACKLIST = { dbms: 1 };
 const ISOP = { '+': 1, '-': 1, '*': 1, '/': 1, '=': 1, '!': 1, '#': 1 };
 const CANSTATS = global.F ? (global.F.stats && global.F.stats.performance && global.F.stats.performance.dbrm != null) : false;
 const CACHEOPT = {};
+const POOLS = {};
 
 var ESCAPE = global.MYSQL_ESCAPE = function(value) {
 
@@ -517,13 +518,14 @@ function remove(client, cmd) {
 }
 
 function destroy(conn) {
-	var poll = conn.$$poll;
-	if (poll) {
-		if (conn.$dbmstransaction)
-			conn.$dbmstransaction = false;
-		conn.releaseConnection(poll);
-	} else {
-		conn.destroy();
+	if (conn) {
+		if (conn.$pool) {
+			if (conn.$dbmstransaction)
+				conn.$dbmstransaction = false;
+			conn.$pool && conn.$pool.releaseConnection(conn);
+			conn.$pool = null;
+		} else
+			conn.destroy();
 	}
 }
 
@@ -624,43 +626,43 @@ function clientcommand(cmd, client, self) {
 exports.run = function(opt, self, cmd, repeated) {
 
 	var conn = self.$conn[opt.id];
+	if (conn) {
+		clientcommand(cmd, conn, self);
+		return;
+	}
 
-	if (!conn) {
-		if (opt.options.pooling) {
-			var optconn = CACHEOPT[opt.id];
-			if (!optconn) {
-				optconn = CACHEOPT[opt.id] = CLONE(opt.options);
-				if (optconn.max) {
-					optconn.connectionLimit = optconn.max;
-					delete optconn.max;
-				}
-				delete optconn.min;
-				delete optconn.pooling;
+	if (opt.options.pooling) {
+		conn = POOLS[opt.id];
+		if (!conn) {
+			var optconn = CLONE(opt.options);
+			if (optconn.max) {
+				optconn.connectionLimit = optconn.max;
+				delete optconn.max;
 			}
-			conn = self.$conn[opt.id] = Database.createPool(optconn);
-		} else {
-
-			var optconn = CACHEOPT[opt.id];
-			if (!optconn) {
-				optconn = CACHEOPT[opt.id] = CLONE(opt.options);
-				if (optconn.max) {
-					optconn.connectionLimit = optconn.max;
-					delete optconn.max;
-				}
-				delete optconn.min;
-				delete optconn.pooling;
-			}
-
-			conn = self.$conn[opt.id] = Database.createConnection(optconn);
-			conn.$dbms = self;
-			conn.$$destroy = destroy;
+			delete optconn.min;
+			delete optconn.pooling;
+			conn = POOLS[opt.id] = Database.createPool(optconn);
 		}
+	} else {
+
+		var optconn = CACHEOPT[opt.id];
+		if (!optconn) {
+			optconn = CACHEOPT[opt.id] = CLONE(opt.options);
+			if (optconn.max) {
+				optconn.connectionLimit = optconn.max;
+				delete optconn.max;
+			}
+			delete optconn.min;
+			delete optconn.pooling;
+		}
+
+		conn = self.$conn[opt.id] = Database.createConnection(optconn);
+		conn.$dbms = self;
+		conn.$$destroy = destroy;
 	}
 
 	self.$op = null;
 	self.busy = true;
-
-	conn.$opt = opt;
 
 	if (opt.options.pooling) {
 		conn.getConnection(function(err, connection) {
@@ -671,9 +673,7 @@ exports.run = function(opt, self, cmd, repeated) {
 
 				if ((!repeated || repeated < 3) && err.toString().indexOf('Too many connections') !== -1) {
 					// try again
-					setTimeout(function() {
-						exports.run(opt, self, cmd, (repeated || 0) + 1);
-					}, 200);
+					setTimeout(exports.run, 200, opt, self, cmd, (repeated || 0) + 1);
 					return;
 				}
 
@@ -683,15 +683,17 @@ exports.run = function(opt, self, cmd, repeated) {
 					cmd.db.$next(err);
 
 			} else {
-				conn.$dbms = self;
-				conn.$$poll = connection;
-				conn.$$destroy = destroy;
+				self.$conn[opt.id] = connection;
+				connection.$dbms = self;
 				connection.$opt = opt;
+				connection.$pool = conn;
+				connection.$$destroy = destroy;
 				clientcommand(cmd, connection, self);
 			}
 		});
 	} else
 		clientcommand(cmd, conn, self);
+
 };
 
 function prepare_owner(cmd, condition) {
