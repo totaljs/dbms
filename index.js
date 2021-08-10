@@ -488,7 +488,7 @@ DP.forcekill = function() {
 		for (var key in self.$conn) {
 			var item = self.$conn[key];
 			if (item) {
-				item.$$destroy(item);
+				item.$$destroy && item.$$destroy(item);
 				self.$conn[key] = null;
 			}
 		}

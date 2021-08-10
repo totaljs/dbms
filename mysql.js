@@ -621,7 +621,7 @@ function clientcommand(cmd, client, self) {
 	}
 }
 
-exports.run = function(opt, self, cmd) {
+exports.run = function(opt, self, cmd, repeated) {
 
 	var conn = self.$conn[opt.id];
 
@@ -652,18 +652,29 @@ exports.run = function(opt, self, cmd) {
 
 	if (opt.options.pooling) {
 		conn.getConnection(function(err, connection) {
+
 			if (err) {
 				self.busy = false;
 				opt.onerror && opt.onerror(err);
+
+				if ((!repeated || repeated < 3) && err.toString().indexOf('Too many connections') !== -1) {
+					// try again
+					setTimeout(function() {
+						exports.run(opt, self, cmd, (repeated || 0) + 1);
+					}, 200);
+					return;
+				}
 
 				if (cmd.builder)
 					cmd.builder.$callback(err);
 				else
 					cmd.db.$next(err);
+
 			} else {
 				conn.$dbms = self;
 				conn.$$poll = connection;
 				conn.$$destroy = destroy;
+				connection.$opt = opt;
 				clientcommand(cmd, connection, self);
 			}
 		});
