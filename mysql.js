@@ -630,15 +630,27 @@ exports.run = function(opt, self, cmd, repeated) {
 			var optconn = CACHEOPT[opt.id];
 			if (!optconn) {
 				optconn = CACHEOPT[opt.id] = CLONE(opt.options);
+				if (optconn.max) {
+					optconn.connectionLimit = optconn.max;
+					delete optconn.max;
+				}
+				delete optconn.min;
 				delete optconn.pooling;
 			}
 			conn = self.$conn[opt.id] = Database.createPool(optconn);
 		} else {
+
 			var optconn = CACHEOPT[opt.id];
 			if (!optconn) {
 				optconn = CACHEOPT[opt.id] = CLONE(opt.options);
+				if (optconn.max) {
+					optconn.connectionLimit = optconn.max;
+					delete optconn.max;
+				}
+				delete optconn.min;
 				delete optconn.pooling;
 			}
+
 			conn = self.$conn[opt.id] = Database.createConnection(optconn);
 			conn.$dbms = self;
 			conn.$$destroy = destroy;
