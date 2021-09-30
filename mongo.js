@@ -331,6 +331,13 @@ exports.run = function(opt, self, cmd) {
 				case 'read':
 					select(client, cmd);
 					break;
+				case 'diff':
+					var cb = cmd.builder.$callback;
+					cmd.builder.$callback = function(err, response) {
+						cb.call(cmd.builder, err, err ? EMPTYOBJECT : DIFFARR(cmd.key, response, [cmd.form]));
+					};
+					select(client, cmd);
+					break;
 				case 'list':
 					list(client, cmd);
 					break;
