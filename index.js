@@ -1964,7 +1964,7 @@ exports.init = function(name, connection, onerror) {
 			CONN[name] = { id: name, db: 'textdb', options: connection, table: opt.host, database: opt.host, onerror: onerror, type: 'textdb' };
 			break;
 		case 'opendb:':
-			CONN[name] = { id: name, db: 'opendb', options: connection, table: opt.host, url: connection.replace('opendb:', 'wss:'), database: opt.host, onerror: onerror, type: 'opendb' };
+			CONN[name] = { id: name, db: 'opendb', options: connection, table: opt.host, url: connection.replace('opendb:',  q.ssl === '1' || q.ssl === 'true' || q.ssl === 'on' ? 'wss:' : 'ws:'), database: opt.host, onerror: onerror, type: 'opendb' };
 			break;
 	}
 
