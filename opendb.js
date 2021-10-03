@@ -20,7 +20,7 @@ function select(client, cmd) {
 		data.fields = fields;
 
 	data.filter = filter.filter;
-	data.filterparams = filter.arg;
+	data.filterarg = filter.arg;
 
 	if (filter.sort)
 		data.sort = filter.sort;
@@ -61,7 +61,7 @@ function check(client, cmd) {
 	data.TYPE = 'read';
 	data.db = builder.options.table;
 	data.filter = filter.filter;
-	data.filterparams = filter.arg;
+	data.filterarg = filter.arg;
 
 	if (!cmd.value && builder.options.params)
 		cmd.value = [];
@@ -89,7 +89,7 @@ function query(client, cmd) {
 	data.filter = filter.filter;
 	data.filterparams = filter.arg;
 	data.scalar = cmd.query;
-	data.scalarparams = cmd.value || {};
+	data.scalararg = cmd.value || EMPTYOBJECT;
 
 	builder.db.$debug && builder.db.$debug(data);
 	F.$events.dbms && EMIT('dbms', 'query', opt.table, opt.db, builder);
@@ -114,7 +114,7 @@ function scalar(client, cmd) {
 	data.filter = filter.filter;
 	data.filterparams =filter.arg;
 	data.scalar = scalar;
-	data.scalarparams = {};
+	data.scalararg = EMPTYOBJECT;
 
 	var name = cmd.name;
 	if (name) {
@@ -252,11 +252,10 @@ function insertexists(client, cmd) {
 	var filter = WHERE(cmd.builder);
 	var data = {};
 
-	data = {};
 	data.TYPE = 'read';
 	data.db = builder.options.table;
 	data.filter = filter.filter;
-	data.filterparams = filter.arg;
+	data.filterarg = filter.arg;
 
 	F.$events.dbms && EMIT('dbms', 'select', opt.table, data, builder);
 
@@ -276,7 +275,7 @@ function modify(client, cmd) {
 
 	var keys = Object.keys(cmd.builder.value);
 	var params = [];
-	var arr = [];
+	var arg = {};
 	var builder = [];
 	var tmp;
 	for (var i = 0; i < keys.length; i++) {
@@ -323,11 +322,11 @@ function modify(client, cmd) {
 			case '/':
 				key = key.substring(1);
 				params.push(val ? val : 0);
-				builder.push('doc.' + key + '=(doc.' + key + '||0)' + c + push(arr, val ? val : 0));
+				builder.push('doc.' + key + '=(doc.' + key + '||0)' + c + push(arg, val ? val : 0, cmd.builder));
 				break;
 			case '>':
 			case '<':
-				tmp = push(arr, val ? val : 0);
+				tmp = push(arg, val ? val : 0, cmd.builder);
 				key = key.substring(1);
 				builder.push('doc.' + key + '=(doc.' + key + '||0)' + c + tmp + '?(doc.' + key + '||0):' + tmp);
 				break;
@@ -342,7 +341,7 @@ function modify(client, cmd) {
 				builder.push('doc.' + key + '=' + val);
 				break;
 			default:
-				builder.push('doc.' + key + '=' + push(arr, val));
+				builder.push('doc.' + key + '=' + push(arg, val, cmd.builder));
 				break;
 		}
 	}
@@ -362,7 +361,7 @@ function modify(client, cmd) {
 	data.filter = filter.filter;
 	data.filterparams = filter.arg;
 	data.modify = builder.join(';');
-	data.modifyparams = arr;
+	data.modifyarg = arg;
 
 	if (filter.take)
 		data.take = filter.take;
@@ -394,7 +393,7 @@ function remove(client, cmd) {
 	data.TYPE = 'remove';
 	data.db = builder.options.table;
 	data.filter = filter.filter;
-	data.filterparams = filter.arg;
+	data.filterarg = filter.arg;
 
 	if (filter.take)
 		data.take = filter.take;
@@ -413,6 +412,7 @@ function remove(client, cmd) {
 }
 
 function clientcommand(cmd, client) {
+	cmd.builder.pcounter = 0;
 	switch (cmd.type) {
 		case 'transaction':
 		case 'end':
@@ -555,8 +555,10 @@ exports.run = function(opt, self, cmd) {
 		connect(opt, self, cmd);
 };
 
-function push(arr, value) {
-	return 'arg[' + (arr.push(value) - 1) + ']';
+function push(arg, value, builder) {
+	var p = 'k' + (builder.pcounter++);
+	arg[p] = value;
+	return 'arg.' + p;
 }
 
 function WHERE(builder) {
@@ -565,7 +567,7 @@ function WHERE(builder) {
 	var sort = '';
 	var op = '&&';
 	var opuse = false;
-	var arg = [];
+	var arg = {};
 
 	for (var i = 0; i < builder.$commands.length; i++) {
 		var cmd = builder.$commands[i];
@@ -584,7 +586,7 @@ function WHERE(builder) {
 				if (cmd.value === undefined)
 					condition.push(cmd.name);
 				else {
-					var tmp = push(arg, cmd.value);
+					var tmp = push(arg, cmd.value, builder);
 					condition.push('doc.' + cmd.name + ' instanceof Array?(doc.' + cmd.name + '.indexOf(' + tmp + ')' + (cmd.compare === '==' ? '!=' : '==') + '-1):(doc.' + cmd.name + cmd.compare + tmp + ')');
 				}
 
@@ -609,10 +611,10 @@ function WHERE(builder) {
 					}
 
 					opuse && condition.length && condition.push(op);
-					condition.push(push(arg, cmd.value) + '.indexOf(doc.' + cmd.name + ')!==-1');
+					condition.push(push(arg, cmd.value, builder) + '.indexOf(doc.' + cmd.name + ')!==-1');
 				} else {
 					opuse && condition.length && condition.push(op);
-					condition.push('doc.' + cmd.name + '==' + push(arg, cmd.field ? cmd.value[cmd.field] : cmd.value));
+					condition.push('doc.' + cmd.name + '==' + push(arg, cmd.field ? cmd.value[cmd.field] : cmd.value, builder));
 				}
 				break;
 			case 'notin':
@@ -632,21 +634,20 @@ function WHERE(builder) {
 					}
 
 					opuse && condition.length && condition.push(op);
-					condition.push(push(arg, cmd.value) + '.indexOf(doc.' + cmd.name + ')===-1');
+					condition.push(push(arg, cmd.value, builder) + '.indexOf(doc.' + cmd.name + ')===-1');
 				} else {
 					opuse && condition.length && condition.push(op);
-					condition.push('doc.' + cmd.name + '!=' + push(arg, cmd.field ? cmd.value[cmd.field] : cmd.value));
+					condition.push('doc.' + cmd.name + '!=' + push(arg, cmd.field ? cmd.value[cmd.field] : cmd.value, cmd));
 				}
 
 				break;
 			case 'between':
 				opuse && condition.length && condition.push(op);
-				condition.push('(doc.' + cmd.name + '>=' + push(arg, cmd.a) + '&&doc.' + cmd.name + '<=' + push(arg, cmd.b) + ')');
+				condition.push('(doc.' + cmd.name + '>=' + push(arg, cmd.a, builder) + '&&doc.' + cmd.name + '<=' + push(arg, cmd.b, builder) + ')');
 				break;
 			case 'search':
-				// tmp = ESCAPE((!cmd.compare || cmd.compare === '*' ? ('%' + cmd.value + '%') : (cmd.compare === 'beg' ? ('%' + cmd.value) : (cmd.value + '%'))));
 				opuse && condition.length && condition.push(op);
-				condition.push('doc.' + cmd.name + '.indexOf(' + push(arg, cmd.value) + ')!==-1');
+				condition.push('doc.' + cmd.name + '.indexOf(' + push(arg, cmd.value, builder) + ')!==-1');
 				break;
 
 			case 'searchfull':
