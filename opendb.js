@@ -13,7 +13,7 @@ function select(client, cmd) {
 	// opt.table
 	var data = {};
 
-	data.TYPE = 'find';
+	data.type = 'find';
 	data.db = builder.options.table;
 
 	if (fields)
@@ -58,7 +58,7 @@ function check(client, cmd) {
 	var filter = WHERE(builder);
 	var data = {};
 
-	data.TYPE = 'read';
+	data.type = 'read';
 	data.db = builder.options.table;
 	data.filter = filter.filter;
 	data.filterarg = filter.arg;
@@ -84,7 +84,7 @@ function query(client, cmd) {
 	var filter = WHERE(builder);
 	var data = {};
 
-	data.TYPE = 'find';
+	data.type = 'find';
 	data.db = builder.options.table;
 	data.filter = filter.filter;
 	data.filterparams = filter.arg;
@@ -109,7 +109,7 @@ function scalar(client, cmd) {
 	var data = {};
 	var filter = WHERE(builder);
 
-	data.TYPE = 'scalar';
+	data.type = 'scalar';
 	data.db = builder.options.table;
 	data.filter = filter.filter;
 	data.filterparams =filter.arg;
@@ -235,7 +235,7 @@ function insert(client, cmd) {
 	F.$events.dbms && EMIT('dbms', 'insert', opt.table, opt.db, builder);
 
 	var data = {};
-	data.TYPE = 'insert';
+	data.type = 'insert';
 	data.db = builder.options.table;
 	data.data = doc;
 	client.socket.rpc(data, function(err, response) {
@@ -252,7 +252,7 @@ function insertexists(client, cmd) {
 	var filter = WHERE(cmd.builder);
 	var data = {};
 
-	data.TYPE = 'read';
+	data.type = 'read';
 	data.db = builder.options.table;
 	data.filter = filter.filter;
 	data.filterarg = filter.arg;
@@ -356,7 +356,7 @@ function modify(client, cmd) {
 	var filter = WHERE(cmd.builder);
 	var data = {};
 
-	data.TYPE = 'update';
+	data.type = 'update';
 	data.db = cmd.builder.options.table;
 	data.filter = filter.filter;
 	data.filterparams = filter.arg;
@@ -390,7 +390,7 @@ function remove(client, cmd) {
 	var opt = cmd.builder.options;
 	var filter = WHERE(builder);
 	var data = {};
-	data.TYPE = 'remove';
+	data.type = 'remove';
 	data.db = builder.options.table;
 	data.filter = filter.filter;
 	data.filterarg = filter.arg;
@@ -520,7 +520,7 @@ function connect(opt, self, cmd) {
 
 		client.on('message', function(msg) {
 
-			if (msg.TYPE === 'init') {
+			if (msg.type === 'init') {
 				INSTANCES[opt.database].socket = client;
 				INSTANCES[opt.database].ready = 1;
 				opt.socket = client;
