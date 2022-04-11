@@ -512,14 +512,19 @@ function WHERE(builder, scalar) { // , group
 				break;
 
 			case 'search':
-				value = new RegExp((cmd.compare === '*' ? '' : cmd.compare === 'beg' ? '^' : '') + cmd.value + (cmd.compare === 'end' ? '$' : ''));
-				if (tmp) {
-					filter = {};
-					filter[cmd.name] = value;
-					tmp.push(filter);
-				} else
-					condition[cmd.name] = value;
-				break;
+				value = (cmd.compare === '*' ? '' : cmd.compare === 'beg' ? '^' : '') + cmd.value + (cmd.compare === 'end' ? '$' : '');
+				var v = ["[aáä]", "[eéë]", "[iíï]", "[oóö]", "[uúü]"];
+			  	for (let i = 0; i < v.length; i++) {
+			    	value = value.replace(new RegExp(v[i], "gi"), v[i]);
+			  	}
+			  	value = { $regex: value, $options: "i" };
+			if (tmp) {
+				filter = {};
+				filter[cmd.name] = value;
+				tmp.push(filter);
+			} else
+				condition[cmd.name] = value;
+			break;
 			case 'fulltext':
 				value = new RegExp((cmd.compare === '*' ? '' : cmd.compare === 'beg' ? '^' : '') + cmd.value + (cmd.compare === 'end' ? '$' : ''), 'i');
 				if (tmp) {
