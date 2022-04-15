@@ -123,7 +123,8 @@ function scalar(client, cmd) {
 
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var filter = WHERE(builder);
+	var filter = WHERE(builder, true);
+	var cmdgroup = '$' + cmd.name;
 
 	// builder.db.$debug && builder.db.$debug(q);
 
@@ -137,10 +138,22 @@ function scalar(client, cmd) {
 			break;
 		case 'avg':
 		case 'min':
-		case 'sum':
 		case 'max':
-		case 'group':
 			builder.$callback('Not implemented');
+			break;
+		case 'sum':
+			client.db(client.$database).collection(opt.table).aggregate([ filter, {$group:{ _id:cmdgroup, total:{$sum:cmdgroup}}}, { $sort: { total: -1 } }]).toArray(function(err, response) {
+				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
+				client.close();
+				builder.$callback(err, response);
+			});
+			break;
+		case 'group':
+			client.db(client.$database).collection(opt.table).aggregate([ filter, {$group:{ _id:cmdgroup, count:{$sum:1}}}, { $sort: { count: -1 }}]).toArray(function(err, response) {
+				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
+				client.close();
+				builder.$callback(err, response);
+			});
 			break;
 	}
 }
@@ -510,9 +523,13 @@ function WHERE(builder, scalar) { // , group
 				} else
 					condition[cmd.name] = value;
 				break;
-
 			case 'search':
-				value = new RegExp((cmd.compare === '*' ? '' : cmd.compare === 'beg' ? '^' : '') + cmd.value + (cmd.compare === 'end' ? '$' : ''));
+					value = (cmd.compare === '*' ? '' : cmd.compare === 'beg' ? '^' : '') + cmd.value + (cmd.compare === 'end' ? '$' : '');
+					var v = ['[aáä]', '[eéë]', '[iíï]', '[oóö]', '[uúü]'];
+				  	for (let i = 0; i < v.length; i++) {
+				    	value = value.replace(new RegExp(v[i], 'gi'), v[i]);
+				  	}
+				  	value = { $regex: value, $options: 'i' };
 				if (tmp) {
 					filter = {};
 					filter[cmd.name] = value;
@@ -588,7 +605,10 @@ function WHERE(builder, scalar) { // , group
 		}
 	}
 
-	return { where: condition, sort: sort };
+	if (scalar)
+		return { $match: condition };
+	else
+		return { where: condition, sort: sort };
 }
 
 function FIELDS(builder) {
