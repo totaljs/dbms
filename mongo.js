@@ -130,16 +130,32 @@ function scalar(client, cmd) {
 
 	switch (cmd.scalar) {
 		case 'count':
-			client.db(client.$database).collection(opt.table).estimatedDocumentCount(filter.where, function(err, count) {
+			client.db(client.$database).collection(opt.table).aggregate([ filter, {$count: 'count'} ]).toArray(function(err, response) {
 				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
 				client.close();
-				builder.$callback(err, count);
+				builder.$callback(err, response);
 			});
 			break;
 		case 'avg':
+			client.db(client.$database).collection(opt.table).aggregate([ filter, {$group: { _id: cmdgroup, average:{ $avg: cmdgroup }}}, { $sort: { average: -1 } }]).toArray(function(err, response) {
+				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
+				client.close();
+				builder.$callback(err, response);
+			});
+			break;
 		case 'min':
+			client.db(client.$database).collection(opt.table).aggregate([ filter, {$group: { _id: cmdgroup, min:{ $min: cmdgroup }}}, { $sort: { min: -1 } }]).toArray(function(err, response) {
+				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
+				client.close();
+				builder.$callback(err, response);
+			});
+			break;
 		case 'max':
-			builder.$callback('Not implemented');
+			client.db(client.$database).collection(opt.table).aggregate([ filter, {$group: { _id: cmdgroup, max:{ $max: cmdgroup }}}, { $sort: { max: -1 } }]).toArray(function(err, response) {
+				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
+				client.close();
+				builder.$callback(err, response);
+			});
 			break;
 		case 'sum':
 			client.db(client.$database).collection(opt.table).aggregate([ filter, {$group:{ _id:cmdgroup, total:{$sum:cmdgroup}}}, { $sort: { total: -1 } }]).toArray(function(err, response) {
