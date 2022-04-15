@@ -524,12 +524,11 @@ function WHERE(builder, scalar) { // , group
 					condition[cmd.name] = value;
 				break;
 			case 'search':
-					value = (cmd.compare === '*' ? '' : cmd.compare === 'beg' ? '^' : '') + cmd.value + (cmd.compare === 'end' ? '$' : '');
-					var v = ['[aáä]', '[eéë]', '[iíï]', '[oóö]', '[uúü]'];
-				  	for (let i = 0; i < v.length; i++) {
-				    	value = value.replace(new RegExp(v[i], 'gi'), v[i]);
-				  	}
-				  	value = { $regex: value, $options: 'i' };
+				value = (cmd.compare === '*' ? '' : cmd.compare === 'beg' ? '^' : '') + cmd.value + (cmd.compare === 'end' ? '$' : '');
+				var v = ['[aáä]', '[eéë]', '[iíï]', '[oóö]', '[uúü]'];
+				for (let m of v)
+					value = value.replace(new RegExp(m, 'gi'), m);
+				value = { $regex: value, $options: 'i' };
 				if (tmp) {
 					filter = {};
 					filter[cmd.name] = value;
