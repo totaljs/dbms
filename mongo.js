@@ -120,10 +120,10 @@ function list(client, cmd) {
 }
 
 function scalar(client, cmd) {
-
 	var builder = cmd.builder;
 	var opt = builder.options;
-	var filter = WHERE(builder);
+	var filter = WHERE(builder, true);
+	var cmdgroup = "$" + cmd.name;
 
 	// builder.db.$debug && builder.db.$debug(q);
 
@@ -137,10 +137,22 @@ function scalar(client, cmd) {
 			break;
 		case 'avg':
 		case 'min':
-		case 'sum':
 		case 'max':
-		case 'group':
 			builder.$callback('Not implemented');
+			break;
+		case 'sum':
+			client.db(client.$database).collection(opt.table).aggregate([ filter, {$group:{ _id:cmdgroup, total:{$sum:cmdgroup}}}, { $sort: { total: -1 } }]).toArray(function(err, response) {
+				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
+				client.close();
+				builder.$callback(err, response);
+			});
+			break;
+		case 'group':
+			client.db(client.$database).collection(opt.table).aggregate([ filter, {$group:{ _id:cmdgroup, count:{$sum:1}}}, { $sort: { count: -1 } }]).toArray(function(err, response) {
+				err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
+				client.close();
+				builder.$callback(err, response);
+			});
 			break;
 	}
 }
@@ -588,7 +600,10 @@ function WHERE(builder, scalar) { // , group
 		}
 	}
 
-	return { where: condition, sort: sort };
+	if(!scalar)
+		return { where: condition, sort: sort };
+	else
+		return { $match: condition };
 }
 
 function FIELDS(builder) {
