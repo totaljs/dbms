@@ -1953,6 +1953,7 @@ exports.init = function(name, connection, onerror) {
 
 			break;
 
+		case 'mongodb+srv:':
 		case 'mongodb:':
 		case 'mongo:':
 			CONN[name] = { id: name, db: 'mongo', options: connection, database: q.database, onerror: onerror, type: 'mongodb' };
