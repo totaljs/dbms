@@ -557,6 +557,29 @@ DP.list = DP.listing = function(table, improved) {
 	return builder;
 };
 
+DP.listCollections = function(db) {
+	var self = this;
+	var builder = new QueryBuilder(self, 'listCollections');
+	
+	self.$commands.push({ type: 'listCollections', builder: builder });
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
+	return builder;
+};
+
+DP.listDatabases = function() {
+	var self = this;
+	var builder = new QueryBuilder(self, 'listDatabases');
+	self.$commands.push({ type: 'listDatabases', builder: builder });
+	if (!self.busy) {
+		self.$op && clearImmediate(self.$op);
+		self.$op = setImmediate(self.$next);
+	}
+	return builder;
+};
+
 DP.read = DP.one = function(table) {
 	var self = this;
 	var builder = new QueryBuilder(self, 'read');
