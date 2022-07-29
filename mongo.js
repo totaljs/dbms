@@ -390,6 +390,12 @@ exports.run = function(opt, self, cmd) {
 				case 'list':
 					list(client, cmd);
 					break;
+				case 'listCollections':
+					listCollections(client, cmd);
+					break;
+				case 'listDatabases':
+					listDatabases(client, cmd);
+					break;					
 				case 'scalar':
 					scalar(client, cmd);
 					break;
