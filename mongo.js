@@ -119,6 +119,26 @@ function list(client, cmd) {
 	});
 }
 
+function listCollections(client, cmd) {
+	var builder = cmd.builder;
+	var opt = builder.options;
+
+	client.db(client.$database).listCollections().toArray(function(err, response) {
+		client.close();
+		err && client.$opt.onerror && client.$opt.onerror(err, opt, builder);
+		builder.$callback(err, response);
+	});
+}
+
+async function listDatabases(client, cmd) {
+	var builder = cmd.builder;
+	var opt = builder.options;
+
+	var result = await client.db(client.$database).admin().listDatabases();
+		client.close();
+		builder.$callback(result);
+}
+
 function scalar(client, cmd) {
 
 	var builder = cmd.builder;
