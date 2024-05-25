@@ -1,4 +1,4 @@
-const Fs = require('fs');
+bconst Fs = require('fs');
 const Url = require('url');
 const Qs = require('querystring');
 const CONN = {};
@@ -2662,7 +2662,7 @@ QB.gridfilter = function(name, obj, type, key) {
 
 			if (type === Date) {
 				if (typeof(arr[0]) === 'number') {
-					arr[0] = new Date(arr[0], 1, 1, 0, 0, 0);
+					arr[0] = new Date(arr[0], 0, 0, 0, 0, 0);
 					arr[1] = new Date(arr[1], 11, 31, 23, 59, 59);
 				} else
 					arr[1] = arr[1].extend('23:59:59');
