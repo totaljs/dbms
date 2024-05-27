@@ -1,4 +1,4 @@
-bconst Fs = require('fs');
+const Fs = require('fs');
 const Url = require('url');
 const Qs = require('querystring');
 const CONN = {};
